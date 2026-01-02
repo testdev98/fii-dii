@@ -1,107 +1,98 @@
 import React, { useState } from 'react';
-import { Lock, User, Key } from 'lucide-react';
+import { ArrowLeft, X } from 'lucide-react';
+import BrokerSelector from './BrokerSelector';
+import BrokerCredentialsForm from './BrokerCredentialsForm';
 
 const LoginModal = ({ onLogin, onClose }) => {
-  const [credentials, setCredentials] = useState({
-    apiKey: '',
-    clientId: '',
-    password: '',
-    totp: ''
-  });
+  const [selectedBroker, setSelectedBroker] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleBrokerSelect = (broker) => {
+    setSelectedBroker(broker);
+    setError('');
+  };
+
+  const handleBack = () => {
+    setSelectedBroker(null);
+    setError('');
+  };
+
+  const handleSubmit = async (credentials) => {
     setLoading(true);
     setError('');
     
     try {
-      await onLogin(credentials);
+      await onLogin({
+        broker: selectedBroker,
+        credentials
+      });
     } catch (err) {
-      setError(err.message || 'Login failed');
+      setError(err.message || 'Login failed. Please check your credentials and try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-6 text-center">Angel One Login</h2>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">API Key</label>
-            <div className="relative">
-              <Key className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                value={credentials.apiKey}
-                onChange={(e) => setCredentials({...credentials, apiKey: e.target.value})}
-                className="w-full pl-10 pr-4 py-2 bg-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter API Key"
-                required
-              />
+    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 overflow-y-auto">
+      <div className="bg-slate-800 rounded-lg p-6 w-full max-w-2xl my-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            {selectedBroker && (
+              <button
+                onClick={handleBack}
+                className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+            )}
+            <div>
+              <h2 className="text-2xl font-bold">
+                {selectedBroker ? `Connect to ${selectedBroker.name}` : 'Connect Your Broker'}
+              </h2>
+              <p className="text-sm text-gray-400 mt-1">
+                {selectedBroker 
+                  ? 'Enter your credentials to connect' 
+                  : 'Choose your trading platform to get started'}
+              </p>
             </div>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">Client ID</label>
-            <div className="relative">
-              <User className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                value={credentials.clientId}
-                onChange={(e) => setCredentials({...credentials, clientId: e.target.value})}
-                className="w-full pl-10 pr-4 py-2 bg-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter Client ID"
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">Password</label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-              <input
-                type="password"
-                value={credentials.password}
-                onChange={(e) => setCredentials({...credentials, password: e.target.value})}
-                className="w-full pl-10 pr-4 py-2 bg-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter Password"
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">TOTP</label>
-            <input
-              type="text"
-              value={credentials.totp}
-              onChange={(e) => setCredentials({...credentials, totp: e.target.value})}
-              className="w-full px-4 py-2 bg-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter TOTP"
-              required
-            />
-          </div>
-
-          {error && (
-            <div className="bg-red-500 bg-opacity-20 border border-red-500 text-red-200 px-4 py-2 rounded-lg text-sm">
-              {error}
-            </div>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
           )}
+        </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 py-3 rounded-lg font-semibold transition-colors"
-          >
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
+        {/* Content */}
+        <div className="max-h-[70vh] overflow-y-auto">
+          {!selectedBroker ? (
+            <BrokerSelector
+              selectedBroker={selectedBroker}
+              onSelectBroker={handleBrokerSelect}
+            />
+          ) : (
+            <BrokerCredentialsForm
+              broker={selectedBroker}
+              onSubmit={handleSubmit}
+              loading={loading}
+              error={error}
+            />
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="mt-6 pt-4 border-t border-slate-700">
+          <div className="flex items-center justify-between text-xs text-gray-400">
+            <span>🔒 Secure Connection</span>
+            <span>Your data is encrypted</span>
+          </div>
+        </div>
       </div>
     </div>
   );

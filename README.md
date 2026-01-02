@@ -75,7 +75,19 @@ This dashboard analyzes every possible combination of market conditions:
 
 - Node.js (v16 or higher)
 - npm or yarn
-- Angel One trading account with API access (optional for demo)
+- Trading account with any supported broker (optional for demo)
+
+### Supported Brokers
+
+✅ **Angel One** - Fully supported
+✅ **Zerodha** - OAuth required
+✅ **Upstox** - OAuth required
+✅ **Fyers** - OAuth required
+✅ **IIFL Securities** - Supported
+✅ **Alice Blue** - Supported
+✅ **Kotak Securities** - Token required
+✅ **ICICI Direct** - Token required
+🎮 **Demo Mode** - No credentials required
 
 ### Installation
 
@@ -100,14 +112,18 @@ npm run dev
 ### Using the Dashboard
 
 **Demo Mode (No API Required):**
-- Click through the login modal (uses mock data)
-- Explore the Live Dashboard with sample data
-- Use the Scenario Tester to test all 16 scenarios
+- Select "Demo Mode" from broker list
+- Click "Continue with Demo"
+- Explore with sample data
+- Perfect for learning!
 
-**Live Mode (Angel One API):**
-1. Get your Angel One API credentials
-2. Enter them in the login modal
-3. Uncomment real API calls in `src/App.jsx`
+**Live Mode (Connect Your Broker):**
+1. Select your broker from the list
+2. Enter your API credentials
+3. Click "Connect & Login"
+4. Start analyzing real market data
+
+See `BROKER_SETUP_GUIDE.md` for detailed broker setup instructions.
 
 ## 📱 Mobile Responsive
 

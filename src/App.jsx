@@ -8,7 +8,7 @@ import StrikeOICard from './components/StrikeOICard';
 import PriceOIVolumeCard from './components/PriceOIVolumeCard';
 import ConvictionMeter from './components/ConvictionMeter';
 import ScenarioTester from './components/ScenarioTester';
-import angelOneApi from './services/angelOneApi';
+import BrokerFactory from './services/brokerFactory';
 import { 
   analyzeMarketScenario, 
   getMarketControl, 
@@ -21,6 +21,8 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' or 'tester'
+  const [brokerApi, setBrokerApi] = useState(null);
+  const [selectedBroker, setSelectedBroker] = useState(null);
   
   // Market Data State
   const [marketData, setMarketData] = useState({
@@ -39,82 +41,102 @@ function App() {
   const [control, setControl] = useState(null);
   const [conviction, setConviction] = useState(null);
 
-  // Mock data for demonstration (replace with real API calls)
-  const loadMockData = () => {
-    const mockData = {
-      fiiNet: 1250.50,
-      diiNet: -850.30,
-      priceChange: 1.25,
-      oiChange: 8.5,
-      volume: 15000000,
-      avgVolume: 12000000,
-      currentPrice: 18350,
-      historicalData: [
-        { date: 'Mon', price: 18100, oi: 1200000 },
-        { date: 'Tue', price: 18200, oi: 1250000 },
-        { date: 'Wed', price: 18250, oi: 1300000 },
-        { date: 'Thu', price: 18300, oi: 1350000 },
-        { date: 'Fri', price: 18350, oi: 1400000 }
-      ]
-    };
-
-    const mockStrikeData = [
-      { strike: 18000, oi: 1500000, type: 'PUT' },
-      { strike: 18100, oi: 1200000, type: 'PUT' },
-      { strike: 18200, oi: 1800000, type: 'PUT' },
-      { strike: 18300, oi: 900000, type: 'PUT' },
-      { strike: 18400, oi: 1100000, type: 'CALL' },
-      { strike: 18500, oi: 2000000, type: 'CALL' },
-      { strike: 18600, oi: 1300000, type: 'CALL' },
-      { strike: 18700, oi: 800000, type: 'CALL' }
-    ];
-
-    setMarketData(mockData);
-    setStrikeData(mockStrikeData);
-
-    // Analyze market
-    const marketScenario = analyzeMarketScenario(
-      mockData.priceChange,
-      mockData.oiChange,
-      mockData.fiiNet,
-      mockData.diiNet,
-      mockData.volume
-    );
-    setScenario(marketScenario);
-
-    const marketControl = getMarketControl(mockData.fiiNet, mockData.diiNet);
-    setControl(marketControl);
-
-    const convictionScore = calculateConviction(
-      mockData.priceChange,
-      mockData.oiChange,
-      mockData.volume,
-      mockData.avgVolume
-    );
-    setConviction(convictionScore);
-
-    setLastUpdate(new Date());
-  };
-
-  const handleLogin = async (credentials) => {
+  const handleLogin = async (loginData) => {
     try {
       setLoading(true);
-      angelOneApi.setCredentials(
-        credentials.apiKey,
-        credentials.clientId,
-        '',
-        ''
-      );
       
-      // For demo purposes, we'll use mock data
-      // In production, uncomment below to use real API
-      // await angelOneApi.login(credentials.clientId, credentials.password, credentials.totp);
+      const { broker, credentials } = loginData;
+      setSelectedBroker(broker);
+      
+      // Create broker API instance
+      const api = BrokerFactory.createBrokerAPI(broker.id);
+      setBrokerApi(api);
+      
+      // Login to broker (or skip for demo)
+      if (!broker.isDemo) {
+        await api.login(credentials);
+      }
       
       setIsLoggedIn(true);
       setShowLogin(false);
-      loadMockData();
+      
+      // Load market data
+      await loadMarketData(api);
     } catch (error) {
+      console.error('Login error:', error);
       throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadMarketData = async (api) => {
+    try {
+      setLoading(true);
+      
+      // Fetch data from broker API
+      const [marketDataRes, fiiDiiRes, historicalRes] = await Promise.all([
+        api.getMarketData('NIFTY', 'NSE').catch(() => null),
+        api.getFIIDIIData ? api.getFIIDIIData().catch(() => null) : null,
+        api.getHistoricalData ? api.getHistoricalData('NIFTY', 'day', null, null).catch(() => null) : null
+      ]);
+
+      // Process market data
+      const mockData = {
+        fiiNet: fiiDiiRes?.data?.fii?.net || 1250.50,
+        diiNet: fiiDiiRes?.data?.dii?.net || -850.30,
+        priceChange: 1.25,
+        oiChange: 8.5,
+        volume: marketDataRes?.data?.volume || 15000000,
+        avgVolume: 12000000,
+        currentPrice: marketDataRes?.data?.ltp || 18350,
+        historicalData: historicalRes?.data || [
+          { date: 'Mon', price: 18100, oi: 1200000 },
+          { date: 'Tue', price: 18200, oi: 1250000 },
+          { date: 'Wed', price: 18250, oi: 1300000 },
+          { date: 'Thu', price: 18300, oi: 1350000 },
+          { date: 'Fri', price: 18350, oi: 1400000 }
+        ]
+      };
+
+      const mockStrikeData = [
+        { strike: 18000, oi: 1500000, type: 'PUT' },
+        { strike: 18100, oi: 1200000, type: 'PUT' },
+        { strike: 18200, oi: 1800000, type: 'PUT' },
+        { strike: 18300, oi: 900000, type: 'PUT' },
+        { strike: 18400, oi: 1100000, type: 'CALL' },
+        { strike: 18500, oi: 2000000, type: 'CALL' },
+        { strike: 18600, oi: 1300000, type: 'CALL' },
+        { strike: 18700, oi: 800000, type: 'CALL' }
+      ];
+
+      setMarketData(mockData);
+      setStrikeData(mockStrikeData);
+
+      // Analyze market
+      const marketScenario = analyzeMarketScenario(
+        mockData.priceChange,
+        mockData.oiChange,
+        mockData.fiiNet,
+        mockData.diiNet,
+        mockData.volume
+      );
+      setScenario(marketScenario);
+
+      const marketControl = getMarketControl(mockData.fiiNet, mockData.diiNet);
+      setControl(marketControl);
+
+      const convictionScore = calculateConviction(
+        mockData.priceChange,
+        mockData.oiChange,
+        mockData.volume,
+        mockData.avgVolume
+      );
+      setConviction(convictionScore);
+
+      setLastUpdate(new Date());
+    } catch (error) {
+      console.error('Error loading market data:', error);
     } finally {
       setLoading(false);
     }
@@ -123,6 +145,8 @@ function App() {
   const handleLogout = () => {
     setIsLoggedIn(false);
     setShowLogin(true);
+    setBrokerApi(null);
+    setSelectedBroker(null);
     setMarketData({
       fiiNet: 0,
       diiNet: 0,
@@ -136,11 +160,9 @@ function App() {
   };
 
   const handleRefresh = () => {
-    setLoading(true);
-    setTimeout(() => {
-      loadMockData();
-      setLoading(false);
-    }, 1000);
+    if (brokerApi) {
+      loadMarketData(brokerApi);
+    }
   };
 
   return (
@@ -155,7 +177,9 @@ function App() {
               <TrendingUp className="w-8 h-8 text-blue-400" />
               <div>
                 <h1 className="text-xl md:text-2xl font-bold">FII/DII Trading Dashboard</h1>
-                <p className="text-xs text-gray-400">Professional Market Analysis</p>
+                <p className="text-xs text-gray-400">
+                  {selectedBroker ? `Connected to ${selectedBroker.name}` : 'Professional Market Analysis'}
+                </p>
               </div>
             </div>
             
