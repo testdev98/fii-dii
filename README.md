@@ -243,6 +243,8 @@ await angelOneApi.login(credentials.clientId, credentials.password, credentials.
 ✅ Educational workflow guide
 ✅ Strike-wise OI analysis
 ✅ Market conviction meter
+✅ **NEW: FII/DII Deep Analysis** - Detailed institutional investor insights
+✅ **NEW: OI Analysis Tab** - Complete Open Interest breakdown with PCR ratio
 
 ## 📝 License
 

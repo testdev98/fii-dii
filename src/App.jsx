@@ -3,6 +3,9 @@ import { RefreshCw, LogOut, TrendingUp, TestTube } from 'lucide-react';
 import LoginModal from './components/LoginModal';
 import MarketScenarioCard from './components/MarketScenarioCard';
 import FIIDIICard from './components/FIIDIICard';
+import FIIDIIDetailedAnalysis from './components/FIIDIIDetailedAnalysis';
+import OIAnalysis from './components/OIAnalysis';
+import LiveOITracker from './components/LiveOITracker';
 import MarketControlCard from './components/MarketControlCard';
 import StrikeOICard from './components/StrikeOICard';
 import PriceOIVolumeCard from './components/PriceOIVolumeCard';
@@ -20,14 +23,19 @@ function App() {
   const [showLogin, setShowLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(null);
-  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' or 'tester'
+  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'fii-dii', 'oi', 'live-oi', or 'tester'
   const [brokerApi, setBrokerApi] = useState(null);
   const [selectedBroker, setSelectedBroker] = useState(null);
+  const [selectedSymbol, setSelectedSymbol] = useState('NIFTY'); // Default symbol
   
   // Market Data State
   const [marketData, setMarketData] = useState({
     fiiNet: 0,
     diiNet: 0,
+    fiiBuy: 0,
+    fiiSell: 0,
+    diiBuy: 0,
+    diiSell: 0,
     priceChange: 0,
     oiChange: 0,
     volume: 0,
@@ -70,32 +78,36 @@ function App() {
     }
   };
 
-  const loadMarketData = async (api) => {
+  const loadMarketData = async (api, symbol = selectedSymbol) => {
     try {
       setLoading(true);
       
       // Fetch data from broker API
       const [marketDataRes, fiiDiiRes, historicalRes] = await Promise.all([
-        api.getMarketData('NIFTY', 'NSE').catch(() => null),
+        api.getMarketData(symbol, 'NSE').catch(() => null),
         api.getFIIDIIData ? api.getFIIDIIData().catch(() => null) : null,
-        api.getHistoricalData ? api.getHistoricalData('NIFTY', 'day', null, null).catch(() => null) : null
+        api.getHistoricalData ? api.getHistoricalData(symbol, 'day', null, null).catch(() => null) : null
       ]);
 
       // Process market data
       const mockData = {
         fiiNet: fiiDiiRes?.data?.fii?.net || 1250.50,
         diiNet: fiiDiiRes?.data?.dii?.net || -850.30,
+        fiiBuy: fiiDiiRes?.data?.fii?.buy || 12500,
+        fiiSell: fiiDiiRes?.data?.fii?.sell || 11250,
+        diiBuy: fiiDiiRes?.data?.dii?.buy || 8500,
+        diiSell: fiiDiiRes?.data?.dii?.sell || 9350,
         priceChange: 1.25,
         oiChange: 8.5,
         volume: marketDataRes?.data?.volume || 15000000,
         avgVolume: 12000000,
         currentPrice: marketDataRes?.data?.ltp || 18350,
         historicalData: historicalRes?.data || [
-          { date: 'Mon', price: 18100, oi: 1200000 },
-          { date: 'Tue', price: 18200, oi: 1250000 },
-          { date: 'Wed', price: 18250, oi: 1300000 },
-          { date: 'Thu', price: 18300, oi: 1350000 },
-          { date: 'Fri', price: 18350, oi: 1400000 }
+          { date: 'Mon', price: 18100, oi: 1200000, fii: 1100, dii: -800 },
+          { date: 'Tue', price: 18200, oi: 1250000, fii: 1150, dii: -750 },
+          { date: 'Wed', price: 18250, oi: 1300000, fii: 1200, dii: -820 },
+          { date: 'Thu', price: 18300, oi: 1350000, fii: 1220, dii: -840 },
+          { date: 'Fri', price: 18350, oi: 1400000, fii: 1250, dii: -850 }
         ]
       };
 
@@ -150,6 +162,10 @@ function App() {
     setMarketData({
       fiiNet: 0,
       diiNet: 0,
+      fiiBuy: 0,
+      fiiSell: 0,
+      diiBuy: 0,
+      diiSell: 0,
       priceChange: 0,
       oiChange: 0,
       volume: 0,
@@ -161,7 +177,14 @@ function App() {
 
   const handleRefresh = () => {
     if (brokerApi) {
-      loadMarketData(brokerApi);
+      loadMarketData(brokerApi, selectedSymbol);
+    }
+  };
+
+  const handleSymbolChange = (newSymbol) => {
+    setSelectedSymbol(newSymbol);
+    if (brokerApi) {
+      loadMarketData(brokerApi, newSymbol);
     }
   };
 
@@ -185,6 +208,37 @@ function App() {
             
             {isLoggedIn && (
               <div className="flex items-center gap-2">
+                {/* Symbol Selector */}
+                <select
+                  value={selectedSymbol}
+                  onChange={(e) => handleSymbolChange(e.target.value)}
+                  className="px-3 py-2 bg-slate-700 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <optgroup label="Indices">
+                    <option value="NIFTY">NIFTY 50</option>
+                    <option value="BANKNIFTY">BANK NIFTY</option>
+                    <option value="FINNIFTY">FIN NIFTY</option>
+                    <option value="MIDCPNIFTY">MIDCAP NIFTY</option>
+                  </optgroup>
+                  <optgroup label="Popular Stocks">
+                    <option value="RELIANCE">RELIANCE</option>
+                    <option value="TCS">TCS</option>
+                    <option value="HDFCBANK">HDFC BANK</option>
+                    <option value="INFY">INFOSYS</option>
+                    <option value="ICICIBANK">ICICI BANK</option>
+                    <option value="SBIN">SBI</option>
+                    <option value="BHARTIARTL">BHARTI AIRTEL</option>
+                    <option value="ITC">ITC</option>
+                    <option value="KOTAKBANK">KOTAK BANK</option>
+                    <option value="LT">L&T</option>
+                    <option value="AXISBANK">AXIS BANK</option>
+                    <option value="WIPRO">WIPRO</option>
+                    <option value="TATAMOTORS">TATA MOTORS</option>
+                    <option value="TATASTEEL">TATA STEEL</option>
+                    <option value="ADANIENT">ADANI ENTERPRISES</option>
+                  </optgroup>
+                </select>
+                
                 <button
                   onClick={() => setActiveTab(activeTab === 'dashboard' ? 'tester' : 'dashboard')}
                   className="p-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
@@ -210,8 +264,9 @@ function App() {
           </div>
           
           {lastUpdate && (
-            <div className="text-xs text-gray-400 mt-2">
-              Last updated: {lastUpdate.toLocaleTimeString()}
+            <div className="text-xs text-gray-400 mt-2 flex items-center gap-4">
+              <span>Tracking: <span className="text-blue-400 font-semibold">{selectedSymbol}</span></span>
+              <span>Last updated: {lastUpdate.toLocaleTimeString()}</span>
             </div>
           )}
         </div>
@@ -221,31 +276,95 @@ function App() {
       {isLoggedIn && (
         <main className="container mx-auto px-4 py-6 space-y-6">
           {/* Tab Navigation */}
-          <div className="flex gap-2 bg-slate-800 p-2 rounded-lg">
+          <div className="flex gap-2 bg-slate-800 p-2 rounded-lg overflow-x-auto">
             <button
               onClick={() => setActiveTab('dashboard')}
-              className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-colors ${
+              className={`flex-1 min-w-[120px] py-2 px-4 rounded-lg font-semibold transition-colors ${
                 activeTab === 'dashboard' 
                   ? 'bg-blue-600 text-white' 
                   : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
               }`}
             >
-              📊 Live Dashboard
+              📊 Dashboard
             </button>
             <button
-              onClick={() => setActiveTab('tester')}
-              className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-colors ${
-                activeTab === 'tester' 
+              onClick={() => setActiveTab('fii-dii')}
+              className={`flex-1 min-w-[120px] py-2 px-4 rounded-lg font-semibold transition-colors ${
+                activeTab === 'fii-dii' 
+                  ? 'bg-green-600 text-white' 
+                  : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
+              }`}
+            >
+              💰 FII/DII
+            </button>
+            <button
+              onClick={() => setActiveTab('oi')}
+              className={`flex-1 min-w-[120px] py-2 px-4 rounded-lg font-semibold transition-colors ${
+                activeTab === 'oi' 
                   ? 'bg-purple-600 text-white' 
                   : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
               }`}
             >
-              🧪 Scenario Tester (All 16)
+              📈 OI Analysis
+            </button>
+            <button
+              onClick={() => setActiveTab('live-oi')}
+              className={`flex-1 min-w-[120px] py-2 px-4 rounded-lg font-semibold transition-colors ${
+                activeTab === 'live-oi' 
+                  ? 'bg-red-600 text-white' 
+                  : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
+              }`}
+            >
+              🔴 Live OI
+            </button>
+            <button
+              onClick={() => setActiveTab('tester')}
+              className={`flex-1 min-w-[120px] py-2 px-4 rounded-lg font-semibold transition-colors ${
+                activeTab === 'tester' 
+                  ? 'bg-orange-600 text-white' 
+                  : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
+              }`}
+            >
+              🧪 Tester
             </button>
           </div>
 
           {activeTab === 'tester' ? (
             <ScenarioTester />
+          ) : activeTab === 'fii-dii' ? (
+            <FIIDIIDetailedAnalysis fiiDiiData={{
+              fiiNet: marketData.fiiNet,
+              diiNet: marketData.diiNet,
+              fiiBuy: marketData.fiiBuy,
+              fiiSell: marketData.fiiSell,
+              diiBuy: marketData.diiBuy,
+              diiSell: marketData.diiSell,
+              historicalData: marketData.historicalData
+            }} />
+          ) : activeTab === 'oi' ? (
+            <OIAnalysis 
+              oiData={{
+                current: 1400000,
+                previous: 1290000,
+                average: 1300000,
+                peak: 1500000,
+                low: 1100000,
+                volatility: 8.5,
+                pcr: 1.15,
+                maxCallStrike: 18500,
+                maxPutStrike: 18000,
+                totalCallOI: 5000000,
+                totalPutOI: 5750000,
+                historicalData: marketData.historicalData,
+                strikeData: strikeData
+              }}
+              priceData={{
+                current: marketData.currentPrice,
+                previous: marketData.currentPrice - (marketData.currentPrice * marketData.priceChange / 100)
+              }}
+            />
+          ) : activeTab === 'live-oi' ? (
+            <LiveOITracker brokerApi={brokerApi} symbol={selectedSymbol} />
           ) : (
             <>
           {/* Market Scenario */}
