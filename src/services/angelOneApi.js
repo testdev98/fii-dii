@@ -142,9 +142,8 @@ class AngelOneAPI {
 
   async getHistoricalData(symbol, exchange, interval, fromDate, toDate) {
     try {
-      // If symbol token not provided, return mock data
       if (!symbol) {
-        return this.getMockHistoricalData();
+        throw new Error('Symbol token is required for historical data');
       }
 
       const response = await axios.post(`${API_BASE_URL}/rest/secure/angelbroking/historical/v1/getCandleData`, {
@@ -159,16 +158,19 @@ class AngelOneAPI {
       
       // Check if response is successful
       if (response.data && response.data.status && response.data.data) {
-        return response.data;
+        return {
+          success: true,
+          data: response.data.data
+        };
       }
       
-      // If API returns error, use mock data
-      console.warn('Historical data API returned error, using mock data');
-      return this.getMockHistoricalData();
+      throw new Error('No historical data received from API');
     } catch (error) {
-      console.error('Historical data error:', error.response?.data || error.message);
-      // Return mock data on error
-      return this.getMockHistoricalData();
+      console.error('❌ Historical data error:', error.response?.data || error.message);
+      return {
+        success: false,
+        error: error.message || 'Failed to fetch historical data'
+      };
     }
   }
 
@@ -178,39 +180,13 @@ class AngelOneAPI {
     return date.toISOString().split('T')[0] + ' 09:00';
   }
 
-  getMockHistoricalData() {
-    return {
-      success: true,
-      status: true,
-      data: [
-        { date: 'Mon', price: 18100, oi: 1200000, fii: 1100, dii: -800 },
-        { date: 'Tue', price: 18200, oi: 1250000, fii: 1150, dii: -750 },
-        { date: 'Wed', price: 18250, oi: 1300000, fii: 1200, dii: -820 },
-        { date: 'Thu', price: 18300, oi: 1350000, fii: 1220, dii: -840 },
-        { date: 'Fri', price: 18350, oi: 1400000, fii: 1250, dii: -850 }
-      ]
-    };
-  }
-
   async getFIIDIIData() {
     // Angel One doesn't provide FII/DII data directly
-    // Return mock data
+    // Use NSE API instead
+    console.warn('⚠️ Angel One does not provide FII/DII data. Use NSE API instead.');
     return {
-      success: true,
-      status: true,
-      data: {
-        fii: {
-          buy: 12500 + Math.random() * 2000,
-          sell: 11250 + Math.random() * 2000,
-          net: 1250 + Math.random() * 500
-        },
-        dii: {
-          buy: 8500 + Math.random() * 1000,
-          sell: 9350 + Math.random() * 1000,
-          net: -850 + Math.random() * 300
-        },
-        date: new Date().toISOString().split('T')[0]
-      }
+      success: false,
+      error: 'FII/DII data not available from Angel One API. Please use NSE data source.'
     };
   }
 

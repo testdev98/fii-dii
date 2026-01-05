@@ -14,6 +14,7 @@ import ScenarioTester from './components/ScenarioTester';
 import SectorAnalysis from './components/SectorAnalysis';
 import InfoTooltip from './components/InfoTooltip';
 import BrokerFactory from './services/brokerFactory';
+import NSEAPI from './services/nseApi';
 import { getSymbolToken } from './utils/symbolTokens';
 import { 
   analyzeMarketScenario, 
@@ -229,32 +230,86 @@ function App() {
         console.log(`   Low: ₹${response.data.low || 'N/A'}`);
         console.log(`   Volume: ${response.data.volume || 'N/A'}`);
         
+        // Fetch real FII/DII data from NSE
+        console.log('📊 Fetching FII/DII data from NSE...');
+        const fiiDiiResponse = await NSEAPI.getFIIDIIData();
+        
+        let fiiDiiData = {
+          fiiNet: 0,
+          diiNet: 0,
+          fiiBuy: 0,
+          fiiSell: 0,
+          diiBuy: 0,
+          diiSell: 0,
+          fiiDiiDate: 'Data Unavailable',
+          fiiDiiAvailable: false
+        };
+        
+        if (fiiDiiResponse.success && fiiDiiResponse.data) {
+          console.log('✅ Real FII/DII data received from NSE');
+          fiiDiiData = {
+            fiiNet: fiiDiiResponse.data.fii.net,
+            diiNet: fiiDiiResponse.data.dii.net,
+            fiiBuy: fiiDiiResponse.data.fii.buy,
+            fiiSell: fiiDiiResponse.data.fii.sell,
+            diiBuy: fiiDiiResponse.data.dii.buy,
+            diiSell: fiiDiiResponse.data.dii.sell,
+            fiiDiiDate: fiiDiiResponse.data.date,
+            fiiDiiAvailable: true
+          };
+        } else {
+          console.warn('⚠️ FII/DII data not available from NSE');
+          console.warn('   Reason:', fiiDiiResponse.error || 'Unknown');
+        }
+        
+        // Fetch real historical data from broker
+        console.log('📊 Fetching historical data from broker...');
+        const historicalResponse = await api.getHistoricalData(
+          symbolInfo.token,
+          symbolInfo.exchange,
+          'ONE_DAY',
+          this.getDateString(-7),
+          this.getDateString(0)
+        );
+        
+        let historicalData = [];
+        if (historicalResponse?.success && historicalResponse.data) {
+          console.log('✅ Real historical data received');
+          // Process historical data from broker
+          historicalData = historicalResponse.data.map((candle, index) => ({
+            date: candle[0] || `Day ${index + 1}`, // timestamp
+            price: parseFloat(candle[4]) || currentPrice, // close price
+            oi: parseInt(candle[5]) || 0, // open interest (if available)
+            volume: parseInt(candle[6]) || 0, // volume
+            fii: 0, // FII data not available in candle data
+            dii: 0  // DII data not available in candle data
+          }));
+        } else {
+          console.warn('⚠️ Historical data not available from broker');
+          // Don't create fake historical data - leave it empty
+          historicalData = [];
+        }
+        
         const processedData = {
-          // FII/DII data - Published by NSE after market hours (not real-time)
-          // This is yesterday's data or last available data
-          fiiNet: 1250.50,
-          diiNet: -850.30,
-          fiiBuy: 12500,
-          fiiSell: 11250,
-          diiBuy: 8500,
-          diiSell: 9350,
-          fiiDiiDate: 'Previous Trading Day', // FII/DII data is T-1 (yesterday)
-          currentPrice: currentPrice, // Real-time price from broker
+          // Real FII/DII data from NSE (T-1 data)
+          ...fiiDiiData,
+          // Real-time price data from broker
+          currentPrice: currentPrice,
           previousClose: previousClose,
           openPrice: openPrice,
-          priceChange: priceChangeFromClose, // Change from previous close
-          priceChangeFromOpen: priceChangeFromOpen, // Change from today's open
-          oiChange: 8.5,
-          volume: response.data.volume || 15000000,
-          avgVolume: 12000000,
-          historicalData: [
-            { date: 'Mon', price: currentPrice * 0.98, oi: 1200000, volume: 12000000, fii: 1125, dii: -765 },
-            { date: 'Tue', price: currentPrice * 0.99, oi: 1250000, volume: 14000000, fii: 1188, dii: -808 },
-            { date: 'Wed', price: currentPrice * 0.995, oi: 1300000, volume: 13500000, fii: 1213, dii: -826 },
-            { date: 'Thu', price: currentPrice * 0.998, oi: 1350000, volume: 15500000, fii: 1238, dii: -842 },
-            { date: 'Fri', price: currentPrice, oi: 1400000, volume: response.data.volume || 15000000, fii: 1250.50, dii: -850.30 }
-          ]
+          priceChange: priceChangeFromClose,
+          priceChangeFromOpen: priceChangeFromOpen,
+          oiChange: response.data.oiChange || 0, // OI change from broker if available
+          volume: response.data.volume || 0,
+          avgVolume: 0, // Calculate from historical data if available
+          historicalData: historicalData
         };
+        
+        // Calculate average volume from historical data
+        if (historicalData.length > 0) {
+          const totalVolume = historicalData.reduce((sum, day) => sum + day.volume, 0);
+          processedData.avgVolume = Math.floor(totalVolume / historicalData.length);
+        }
         
         setMarketData(processedData);
         
@@ -319,40 +374,14 @@ function App() {
           }
         }
         
-        // Fallback: Calculate strikes based on current price
+        // Fallback: Show warning that option chain data is not available
         if (strikes.length === 0) {
-          console.log('📊 Calculating strike data based on current price');
-          const strikeInterval = symbolInfo.strikeInterval;
-          const baseStrike = Math.round(currentPrice / strikeInterval) * strikeInterval;
+          console.warn('⚠️ Option chain data not available from broker');
+          console.warn('💡 Strike OI data cannot be displayed without real option chain');
           
-          console.log(`🎯 Base strike: ${baseStrike}, Current price: ${currentPrice.toFixed(2)}`);
-          
-          for (let i = -5; i <= 5; i++) {
-            const strike = baseStrike + (i * strikeInterval);
-            
-            // Calculate approximate OI based on distance from current price
-            // Strikes closer to current price typically have higher OI
-            const distanceFromPrice = Math.abs(strike - currentPrice);
-            const distanceInStrikes = Math.abs(i);
-            
-            // OI decreases as we move away from ATM
-            const baseOI = 2000000; // 20 lakh base OI
-            const oiMultiplier = Math.max(0.2, 1 - (distanceInStrikes * 0.15));
-            
-            const callOI = Math.floor(baseOI * oiMultiplier * (strike > currentPrice ? 1.2 : 0.8));
-            const putOI = Math.floor(baseOI * oiMultiplier * (strike < currentPrice ? 1.2 : 0.8));
-            
-            strikes.push({ 
-              strike: strike, 
-              oi: strike <= currentPrice ? putOI : callOI,
-              type: strike <= currentPrice ? 'PUT' : 'CALL',
-              callOI: callOI,
-              putOI: putOI,
-              isCalculated: true
-            });
-          }
-          
-          console.log(`📊 Generated ${strikes.length} calculated strikes`);
+          // Don't calculate fake OI - leave strikes empty
+          // The UI will handle showing appropriate message
+          strikes = [];
         }
         
         setStrikeData(strikes);
@@ -436,6 +465,13 @@ function App() {
     console.log(`📊 Changing symbol from ${selectedSymbol} to ${newSymbol}`);
     setSelectedSymbol(newSymbol);
     // Data will be loaded by useEffect when selectedSymbol changes
+  };
+
+  // Helper method for date string formatting
+  const getDateString = (daysOffset) => {
+    const date = new Date();
+    date.setDate(date.getDate() + daysOffset);
+    return date.toISOString().split('T')[0] + ' 09:00';
   };
 
   // Auto-reload data when symbol changes (but not on initial mount)

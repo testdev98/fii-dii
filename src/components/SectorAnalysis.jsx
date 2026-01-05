@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Activity, BarChart3, ArrowUp, ArrowDown } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
 import InfoTooltip from './InfoTooltip';
+import NSEAPI from '../services/nseApi';
 
 const SectorAnalysis = ({ brokerApi }) => {
   const [sectorData, setSectorData] = useState([]);
@@ -28,29 +29,64 @@ const SectorAnalysis = ({ brokerApi }) => {
   const loadSectorData = async () => {
     setLoading(true);
     
-    // Simulate sector performance data
-    // In real implementation, you would fetch actual data from broker API
-    const mockSectorData = sectors.map(sector => {
-      const change = (Math.random() * 6 - 3).toFixed(2); // Random change between -3% to +3%
-      const volume = Math.floor(Math.random() * 50000000) + 10000000;
-      const strength = Math.abs(parseFloat(change)) > 1.5 ? 'Strong' : Math.abs(parseFloat(change)) > 0.5 ? 'Moderate' : 'Weak';
+    try {
+      console.log('📊 Fetching real sector data from NSE...');
+      const response = await NSEAPI.getSectorIndices();
       
-      return {
-        name: sector.name,
-        change: parseFloat(change),
-        volume: volume,
-        strength: strength,
-        color: sector.color,
-        trend: parseFloat(change) > 0 ? 'Bullish' : 'Bearish',
-        stocks: sector.stocks
-      };
-    });
-
-    // Sort by change (best performers first)
-    mockSectorData.sort((a, b) => b.change - a.change);
-    
-    setSectorData(mockSectorData);
-    setLoading(false);
+      if (response.success && response.data) {
+        console.log('✅ Real sector data received from NSE');
+        
+        // Map NSE sector indices to our sector categories
+        const sectorMap = {
+          'NIFTY BANK': { name: 'Banking', color: '#3b82f6', stocks: ['HDFCBANK', 'ICICIBANK', 'SBIN'] },
+          'NIFTY IT': { name: 'IT', color: '#10b981', stocks: ['TCS', 'INFY', 'WIPRO'] },
+          'NIFTY AUTO': { name: 'Auto', color: '#f59e0b', stocks: ['TATAMOTORS', 'M&M', 'MARUTI'] },
+          'NIFTY PHARMA': { name: 'Pharma', color: '#8b5cf6', stocks: ['SUNPHARMA', 'DRREDDY', 'CIPLA'] },
+          'NIFTY ENERGY': { name: 'Energy', color: '#ef4444', stocks: ['RELIANCE', 'ONGC', 'BPCL'] },
+          'NIFTY FMCG': { name: 'FMCG', color: '#ec4899', stocks: ['ITC', 'HINDUNILVR', 'NESTLEIND'] },
+          'NIFTY METAL': { name: 'Metals', color: '#6366f1', stocks: ['TATASTEEL', 'HINDALCO', 'JSWSTEEL'] },
+          'NIFTY MEDIA': { name: 'Telecom', color: '#14b8a6', stocks: ['BHARTIARTL', 'IDEA', 'TATACOMM'] },
+          'NIFTY INFRA': { name: 'Infra', color: '#f97316', stocks: ['LT', 'ADANIENT', 'ADANIPORTS'] },
+          'NIFTY REALTY': { name: 'Realty', color: '#a855f7', stocks: ['DLF', 'GODREJPROP', 'OBEROIRLTY'] }
+        };
+        
+        const processedData = response.data
+          .filter(sector => sectorMap[sector.name])
+          .map(sector => {
+            const sectorInfo = sectorMap[sector.name];
+            const change = sector.change;
+            const strength = Math.abs(change) > 1.5 ? 'Strong' : Math.abs(change) > 0.5 ? 'Moderate' : 'Weak';
+            
+            return {
+              name: sectorInfo.name,
+              change: change,
+              volume: 0, // NSE doesn't provide sector volume
+              strength: strength,
+              color: sectorInfo.color,
+              trend: change > 0 ? 'Bullish' : 'Bearish',
+              stocks: sectorInfo.stocks,
+              value: sector.value,
+              previousClose: sector.previousClose
+            };
+          });
+        
+        // Sort by change (best performers first)
+        processedData.sort((a, b) => b.change - a.change);
+        
+        setSectorData(processedData);
+      } else {
+        console.error('❌ Failed to fetch sector data from NSE');
+        console.error('   Error:', response.error);
+        
+        // Show error message to user
+        setSectorData([]);
+      }
+    } catch (error) {
+      console.error('❌ Error loading sector data:', error);
+      setSectorData([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const topPerformers = sectorData.filter(s => s.change > 0).slice(0, 5);

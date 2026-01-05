@@ -33,7 +33,7 @@ const LiveOITracker = ({ brokerApi, symbol = 'NIFTY' }) => {
     try {
       const symbolInfo = getSymbolToken(symbol);
       let currentPrice = symbolInfo.basePrice;
-      let volume = 15000000 + Math.floor(Math.random() * 2000000);
+      let volume = 0;
       
       // Get real market data from broker if available
       if (brokerApi && !brokerApi.isDemo) {
@@ -41,33 +41,67 @@ const LiveOITracker = ({ brokerApi, symbol = 'NIFTY' }) => {
           const response = await brokerApi.getMarketData(symbol, symbolInfo.exchange, symbolInfo.token, symbolInfo.basePrice);
           if (response?.data) {
             currentPrice = response.data.ltp || currentPrice;
-            volume = response.data.volume || volume;
+            volume = response.data.volume || 0;
           }
         } catch (error) {
-          console.log('Using demo data for OI tracker');
+          console.error('Error fetching market data for OI tracker:', error);
         }
       }
       
       const now = new Date();
       const time = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
       
-      const newData = {
-        time: time,
-        timestamp: now.getTime(),
-        oi: 1400000 + Math.floor(Math.random() * 100000) - 50000,
-        oiChange: (Math.random() * 10 - 5).toFixed(2),
-        volume: volume,
-        atp: currentPrice,
-        ltp: currentPrice,
-        callOI: 5000000 + Math.floor(Math.random() * 500000),
-        putOI: 5500000 + Math.floor(Math.random() * 500000),
-        pcr: 0
-      };
+      // Try to get real option chain data
+      let callOI = 0;
+      let putOI = 0;
+      let totalOI = 0;
+      let oiChange = 0;
+      let hasRealData = false;
       
-      newData.pcr = (newData.putOI / newData.callOI).toFixed(2);
+      if (brokerApi && brokerApi.getOptionChain && !brokerApi.isDemo) {
+        try {
+          const optionChainResponse = await brokerApi.getOptionChain(symbol);
+          if (optionChainResponse?.data && optionChainResponse.data.length > 0) {
+            // Calculate total Call and Put OI from option chain
+            const optionData = optionChainResponse.data;
+            callOI = optionData.reduce((sum, opt) => sum + (opt.optionType === 'CE' ? (opt.openInterest || 0) : 0), 0);
+            putOI = optionData.reduce((sum, opt) => sum + (opt.optionType === 'PE' ? (opt.openInterest || 0) : 0), 0);
+            totalOI = callOI + putOI;
+            
+            // Calculate OI change if we have previous data
+            if (oiData.length > 0) {
+              const prevOI = oiData[oiData.length - 1].oi;
+              oiChange = ((totalOI - prevOI) / prevOI * 100).toFixed(2);
+            }
+            
+            hasRealData = true;
+          }
+        } catch (error) {
+          console.error('Error fetching option chain for OI tracker:', error);
+        }
+      }
       
-      setCurrentData(newData);
-      setOiData(prev => [...prev, newData].slice(-100));
+      // Only add data point if we have real OI data
+      if (hasRealData && totalOI > 0) {
+        const newData = {
+          time: time,
+          timestamp: now.getTime(),
+          oi: totalOI,
+          oiChange: parseFloat(oiChange),
+          volume: volume,
+          atp: currentPrice,
+          ltp: currentPrice,
+          callOI: callOI,
+          putOI: putOI,
+          pcr: callOI > 0 ? (putOI / callOI).toFixed(2) : 0
+        };
+        
+        setCurrentData(newData);
+        setOiData(prev => [...prev, newData].slice(-100));
+      } else {
+        console.warn('⚠️ No real OI data available for Live OI Tracker');
+        // Don't add fake data - just skip this update
+      }
       setLastUpdate(now);
     } catch (error) {
       console.error('Error fetching live OI data:', error);

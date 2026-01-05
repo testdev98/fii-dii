@@ -1,5 +1,9 @@
 // Market Analysis Logic - ALL 16 SCENARIOS based on FII/DII + Price + OI + Volume
-
+// FD_HOST=10.10.0.13
+// FD_PORT=11198
+// FD_USERNAME=idmxuser
+// FD_PASSWORD=pVrRvP_20
+// FD_TH=idmKYCTH
 export const analyzeMarketScenario = (priceChange, oiChange, fiiNet, diiNet, volume) => {
   const priceUp = priceChange > 0;
   const priceDown = priceChange < 0;
