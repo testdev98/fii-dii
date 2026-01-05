@@ -1,6 +1,7 @@
 import AngelOneAPI from './angelOneApi';
 import ZerodhaAPI from './zerodhaApi';
 import UpstoxAPI from './upstoxApi';
+import DhanAPI from './dhanApi';
 import DemoAPI from './demoApi';
 
 class BrokerFactory {
@@ -12,6 +13,8 @@ class BrokerFactory {
         return new ZerodhaAPI();
       case 'upstox':
         return new UpstoxAPI();
+      case 'dhan':
+        return new DhanAPI();
       case 'demo':
         return new DemoAPI();
       default:

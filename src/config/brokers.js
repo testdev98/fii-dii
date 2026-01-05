@@ -105,6 +105,18 @@ export const BROKERS = {
     ],
     apiUrl: 'https://api.icicidirect.com',
     documentation: 'https://api.icicidirect.com/apiuser/home'
+  },
+  
+  DHAN: {
+    id: 'dhan',
+    name: 'Dhan',
+    logo: '🟢',
+    fields: [
+      { name: 'clientId', label: 'Client ID', type: 'text', required: true, placeholder: 'Enter your Dhan Client ID' },
+      { name: 'accessToken', label: 'Access Token', type: 'password', required: true, placeholder: 'Enter your Access Token from Dhan Web' }
+    ],
+    apiUrl: 'https://api.dhan.co',
+    documentation: 'https://dhanhq.co/docs/v2/'
   }
 };
 
