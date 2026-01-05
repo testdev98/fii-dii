@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Yahoo Finance API</title>
+</head>
+<body>
+    <h1>Testing Yahoo Finance API for NIFTY</h1>
+    <div id="result"></div>
+
+    <script>
+        async function testAPI() {
+            try {
+                const response = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/^NSEI?interval=1d&range=1d');
+                const data = await response.json();
+                
+                if (data.chart.result[0]) {
+                    const result = data.chart.result[0];
+                    const price = result.meta.regularMarketPrice;
+                    const previousClose = result.meta.previousClose;
+                    const change = price - previousClose;
+                    const changePercent = (change / previousClose) * 100;
+                    
+                    document.getElementById('result').innerHTML = `
+                        <h2>✅ API Working!</h2>
+                        <p><strong>NIFTY Current Price:</strong> ₹${price.toFixed(2)}</p>
+                        <p><strong>Previous Close:</strong> ₹${previousClose.toFixed(2)}</p>
+                        <p><strong>Change:</strong> ${change > 0 ? '+' : ''}${change.toFixed(2)} (${changePercent.toFixed(2)}%)</p>
+                        <pre>${JSON.stringify(result.meta, null, 2)}</pre>
+                    `;
+                } else {
+                    document.getElementById('result').innerHTML = '<h2>❌ No data received</h2>';
+                }
+            } catch (error) {
+                document.getElementById('result').innerHTML = `<h2>❌ Error: ${error.message}</h2>`;
+            }
+        }
+        
+        testAPI();
+    </script>
+</body>
+</html>

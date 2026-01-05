@@ -105,21 +105,11 @@ export const BROKERS = {
     ],
     apiUrl: 'https://api.icicidirect.com',
     documentation: 'https://api.icicidirect.com/apiuser/home'
-  },
-  
-  DEMO: {
-    id: 'demo',
-    name: 'Demo Mode (No API Required)',
-    logo: '🎮',
-    fields: [],
-    apiUrl: null,
-    documentation: null,
-    isDemo: true
   }
 };
 
 export const getBrokerById = (brokerId) => {
-  return BROKERS[brokerId.toUpperCase()] || BROKERS.DEMO;
+  return BROKERS[brokerId.toUpperCase()];
 };
 
 export const getAllBrokers = () => {

@@ -30,63 +30,44 @@ const LiveOITracker = ({ brokerApi, symbol = 'NIFTY' }) => {
   // Fetch live OI data
   const fetchLiveData = async () => {
     try {
-      if (!brokerApi) {
-        // Generate mock data for demo
-        const now = new Date();
-        const time = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
-        
-        const mockData = {
-          time: time,
-          timestamp: now.getTime(),
-          oi: 1400000 + Math.floor(Math.random() * 100000) - 50000,
-          oiChange: (Math.random() * 10 - 5).toFixed(2),
-          volume: 15000000 + Math.floor(Math.random() * 2000000),
-          atp: 18350 + (Math.random() * 100 - 50),
-          ltp: 18350 + (Math.random() * 100 - 50),
-          callOI: 5000000 + Math.floor(Math.random() * 500000),
-          putOI: 5500000 + Math.floor(Math.random() * 500000),
-          pcr: 0
-        };
-        
-        mockData.pcr = (mockData.putOI / mockData.callOI).toFixed(2);
-        
-        setCurrentData(mockData);
-        setOiData(prev => [...prev, mockData].slice(-100)); // Keep last 100 data points
-        setLastUpdate(now);
-      } else {
-        // Fetch real data from broker API
-        const symbolInfo = getSymbolToken(symbol);
-        const response = await brokerApi.getMarketData(symbol, symbolInfo.exchange, symbolInfo.token);
-        
-        if (response && response.data) {
-          const now = new Date();
-          const time = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
-          
-          // Use mock values as fallback if API doesn't provide the data
-          const baseOI = 1400000 + Math.floor(Math.random() * 100000) - 50000;
-          const baseCallOI = 5000000 + Math.floor(Math.random() * 500000);
-          const basePutOI = 5500000 + Math.floor(Math.random() * 500000);
-          
-          const newData = {
-            time: time,
-            timestamp: now.getTime(),
-            oi: response.data.oi || baseOI,
-            oiChange: response.data.oiChange || (Math.random() * 10 - 5).toFixed(2),
-            volume: response.data.volume || (15000000 + Math.floor(Math.random() * 2000000)),
-            atp: response.data.atp || response.data.ltp || (18350 + (Math.random() * 100 - 50)),
-            ltp: response.data.ltp || (18350 + (Math.random() * 100 - 50)),
-            callOI: response.data.callOI || baseCallOI,
-            putOI: response.data.putOI || basePutOI,
-            pcr: 0
-          };
-          
-          newData.pcr = (newData.putOI / newData.callOI).toFixed(2);
-          
-          setCurrentData(newData);
-          setOiData(prev => [...prev, newData].slice(-100));
-          setLastUpdate(now);
+      const symbolInfo = getSymbolToken(symbol);
+      let currentPrice = symbolInfo.basePrice;
+      let volume = 15000000 + Math.floor(Math.random() * 2000000);
+      
+      // Get real market data from broker if available
+      if (brokerApi && !brokerApi.isDemo) {
+        try {
+          const response = await brokerApi.getMarketData(symbol, symbolInfo.exchange, symbolInfo.token, symbolInfo.basePrice);
+          if (response?.data) {
+            currentPrice = response.data.ltp || currentPrice;
+            volume = response.data.volume || volume;
+          }
+        } catch (error) {
+          console.log('Using demo data for OI tracker');
         }
       }
+      
+      const now = new Date();
+      const time = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+      
+      const newData = {
+        time: time,
+        timestamp: now.getTime(),
+        oi: 1400000 + Math.floor(Math.random() * 100000) - 50000,
+        oiChange: (Math.random() * 10 - 5).toFixed(2),
+        volume: volume,
+        atp: currentPrice,
+        ltp: currentPrice,
+        callOI: 5000000 + Math.floor(Math.random() * 500000),
+        putOI: 5500000 + Math.floor(Math.random() * 500000),
+        pcr: 0
+      };
+      
+      newData.pcr = (newData.putOI / newData.callOI).toFixed(2);
+      
+      setCurrentData(newData);
+      setOiData(prev => [...prev, newData].slice(-100));
+      setLastUpdate(now);
     } catch (error) {
       console.error('Error fetching live OI data:', error);
     }
@@ -337,15 +318,49 @@ const LiveOITracker = ({ brokerApi, symbol = 'NIFTY' }) => {
             <ResponsiveContainer width="100%" height={300}>
               <ComposedChart data={oiData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="time" stroke="#9ca3af" fontSize={10} />
-                <YAxis yAxisId="left" stroke="#9ca3af" fontSize={10} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569' }}
-                  labelStyle={{ color: '#e2e8f0' }}
+                <XAxis 
+                  dataKey="time" 
+                  stroke="#9ca3af" 
+                  fontSize={12}
+                  tick={{ fill: '#9ca3af' }}
                 />
-                <Legend />
-                <Area yAxisId="left" type="monotone" dataKey="oi" fill="#3b82f6" stroke="#3b82f6" fillOpacity={0.3} name="Open Interest" />
-                <Line yAxisId="left" type="monotone" dataKey="oi" stroke="#3b82f6" strokeWidth={2} dot={false} name="OI Trend" />
+                <YAxis 
+                  yAxisId="left" 
+                  stroke="#9ca3af" 
+                  fontSize={12}
+                  tick={{ fill: '#9ca3af' }}
+                  tickFormatter={(value) => `${(value / 100000).toFixed(1)}L`}
+                  label={{ value: 'Open Interest (Lakhs)', angle: -90, position: 'insideLeft', fill: '#9ca3af' }}
+                />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: '8px' }}
+                  labelStyle={{ color: '#e2e8f0', fontWeight: 'bold' }}
+                  formatter={(value, name) => {
+                    if (name === 'Open Interest') {
+                      return [`${(value / 100000).toFixed(2)}L`, name];
+                    }
+                    return [value, name];
+                  }}
+                />
+                <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                <Area 
+                  yAxisId="left" 
+                  type="monotone" 
+                  dataKey="oi" 
+                  fill="#3b82f6" 
+                  stroke="#3b82f6" 
+                  fillOpacity={0.2} 
+                  name="Open Interest" 
+                />
+                <Line 
+                  yAxisId="left" 
+                  type="monotone" 
+                  dataKey="oi" 
+                  stroke="#60a5fa" 
+                  strokeWidth={3} 
+                  dot={{ fill: '#3b82f6', r: 4 }} 
+                  name="OI Trend" 
+                />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -359,13 +374,25 @@ const LiveOITracker = ({ brokerApi, symbol = 'NIFTY' }) => {
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={oiData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="time" stroke="#9ca3af" fontSize={10} />
-                <YAxis stroke="#9ca3af" fontSize={10} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569' }}
-                  labelStyle={{ color: '#e2e8f0' }}
+                <XAxis 
+                  dataKey="time" 
+                  stroke="#9ca3af" 
+                  fontSize={12}
+                  tick={{ fill: '#9ca3af' }}
                 />
-                <Bar dataKey="volume" fill="#10b981" name="Volume" />
+                <YAxis 
+                  stroke="#9ca3af" 
+                  fontSize={12}
+                  tick={{ fill: '#9ca3af' }}
+                  tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`}
+                  label={{ value: 'Volume (Million)', angle: -90, position: 'insideLeft', fill: '#9ca3af' }}
+                />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: '8px' }}
+                  labelStyle={{ color: '#e2e8f0', fontWeight: 'bold' }}
+                  formatter={(value) => [`${(value / 1000000).toFixed(2)}M`, 'Volume']}
+                />
+                <Bar dataKey="volume" fill="#10b981" radius={[8, 8, 0, 0]} name="Volume" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -374,41 +401,122 @@ const LiveOITracker = ({ brokerApi, symbol = 'NIFTY' }) => {
           <div className="bg-slate-800 rounded-lg p-6">
             <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
               <TrendingDown className="w-6 h-6 text-purple-400" />
-              Average Traded Price (ATP)
+              Price Movement (ATP vs LTP)
             </h3>
             <ResponsiveContainer width="100%" height={250}>
               <LineChart data={oiData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="time" stroke="#9ca3af" fontSize={10} />
-                <YAxis stroke="#9ca3af" fontSize={10} domain={['auto', 'auto']} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569' }}
-                  labelStyle={{ color: '#e2e8f0' }}
+                <XAxis 
+                  dataKey="time" 
+                  stroke="#9ca3af" 
+                  fontSize={12}
+                  tick={{ fill: '#9ca3af' }}
                 />
-                <Legend />
-                <Line type="monotone" dataKey="atp" stroke="#a855f7" strokeWidth={2} dot={false} name="ATP" />
-                <Line type="monotone" dataKey="ltp" stroke="#fbbf24" strokeWidth={2} dot={false} name="LTP" />
+                <YAxis 
+                  stroke="#9ca3af" 
+                  fontSize={12}
+                  tick={{ fill: '#9ca3af' }}
+                  domain={['dataMin - 50', 'dataMax + 50']}
+                  tickFormatter={(value) => `₹${value.toFixed(0)}`}
+                  label={{ value: 'Price (₹)', angle: -90, position: 'insideLeft', fill: '#9ca3af' }}
+                />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: '8px' }}
+                  labelStyle={{ color: '#e2e8f0', fontWeight: 'bold' }}
+                  formatter={(value) => `₹${value.toFixed(2)}`}
+                />
+                <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                <Line 
+                  type="monotone" 
+                  dataKey="atp" 
+                  stroke="#a855f7" 
+                  strokeWidth={3} 
+                  dot={{ fill: '#a855f7', r: 4 }} 
+                  name="ATP (Avg Traded Price)" 
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="ltp" 
+                  stroke="#fbbf24" 
+                  strokeWidth={3} 
+                  dot={{ fill: '#fbbf24', r: 4 }} 
+                  name="LTP (Last Traded Price)" 
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
 
           {/* Call vs Put OI Chart */}
           <div className="bg-slate-800 rounded-lg p-6">
-            <h3 className="text-xl font-bold mb-4">📞 Call vs Put OI (Live)</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={oiData}>
+            <h3 className="text-xl font-bold mb-4">📞 Call vs Put OI (Support & Resistance)</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <ComposedChart data={oiData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="time" stroke="#9ca3af" fontSize={10} />
-                <YAxis stroke="#9ca3af" fontSize={10} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569' }}
-                  labelStyle={{ color: '#e2e8f0' }}
+                <XAxis 
+                  dataKey="time" 
+                  stroke="#9ca3af" 
+                  fontSize={12}
+                  tick={{ fill: '#9ca3af' }}
                 />
-                <Legend />
-                <Line type="monotone" dataKey="callOI" stroke="#ef4444" strokeWidth={2} dot={false} name="Call OI" />
-                <Line type="monotone" dataKey="putOI" stroke="#10b981" strokeWidth={2} dot={false} name="Put OI" />
-              </LineChart>
+                <YAxis 
+                  stroke="#9ca3af" 
+                  fontSize={12}
+                  tick={{ fill: '#9ca3af' }}
+                  tickFormatter={(value) => `${(value / 100000).toFixed(1)}L`}
+                  label={{ value: 'OI (Lakhs)', angle: -90, position: 'insideLeft', fill: '#9ca3af' }}
+                />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: '8px' }}
+                  labelStyle={{ color: '#e2e8f0', fontWeight: 'bold' }}
+                  formatter={(value, name) => [`${(value / 100000).toFixed(2)}L`, name]}
+                />
+                <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                <Area 
+                  type="monotone" 
+                  dataKey="callOI" 
+                  fill="#ef4444" 
+                  stroke="#ef4444" 
+                  fillOpacity={0.2} 
+                  name="Call OI (Resistance)" 
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="putOI" 
+                  fill="#10b981" 
+                  stroke="#10b981" 
+                  fillOpacity={0.2} 
+                  name="Put OI (Support)" 
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="callOI" 
+                  stroke="#ef4444" 
+                  strokeWidth={3} 
+                  dot={{ fill: '#ef4444', r: 4 }} 
+                  name="Call OI" 
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="putOI" 
+                  stroke="#10b981" 
+                  strokeWidth={3} 
+                  dot={{ fill: '#10b981', r: 4 }} 
+                  name="Put OI" 
+                />
+              </ComposedChart>
             </ResponsiveContainer>
+            <div className="mt-4 p-4 bg-slate-700 rounded-lg">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-red-400 font-semibold">🔴 Call OI High = Resistance</span>
+                  <p className="text-gray-400 text-xs mt-1">Price may face selling pressure</p>
+                </div>
+                <div>
+                  <span className="text-green-400 font-semibold">🟢 Put OI High = Support</span>
+                  <p className="text-gray-400 text-xs mt-1">Price may find buying support</p>
+                </div>
+              </div>
+            </div>
           </div>
         </>
       )}

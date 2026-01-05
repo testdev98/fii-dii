@@ -75,11 +75,12 @@ class AngelOneAPI {
     }
   }
 
-  async getMarketData(symbol, exchange, token) {
+  async getMarketData(symbol, exchange, token, basePrice = 24500) {
     try {
-      // If token not provided, return mock data
+      console.log(`🔍 Fetching market data for ${symbol} (Token: ${token}, Exchange: ${exchange})`);
+      
       if (!token) {
-        return this.generateMockMarketData();
+        throw new Error('Token is required for market data');
       }
 
       const response = await axios.post(`${API_BASE_URL}/rest/secure/angelbroking/market/v1/quote/`, {
@@ -91,58 +92,51 @@ class AngelOneAPI {
         headers: this.getHeaders()
       });
       
-      // Check if response is successful
+      console.log('📡 Angel One API Response:', response.data);
+      
       if (response.data && response.data.status && response.data.data) {
-        return response.data;
+        const fetchedData = response.data.data.fetched[0];
+        
+        if (fetchedData) {
+          console.log(`✅ Real price from broker: ₹${fetchedData.ltp}`);
+          
+          return {
+            success: true,
+            status: true,
+            data: {
+              ltp: parseFloat(fetchedData.ltp),
+              open: parseFloat(fetchedData.open),
+              high: parseFloat(fetchedData.high),
+              low: parseFloat(fetchedData.low),
+              close: parseFloat(fetchedData.close),
+              volume: parseInt(fetchedData.volume || 0),
+              pChange: parseFloat(fetchedData.pChange || 0)
+            }
+          };
+        }
       }
       
-      // If API returns error, use mock data
-      console.warn('Market data API returned error, using mock data');
-      return this.generateMockMarketData();
+      throw new Error('No data received from broker API');
     } catch (error) {
-      console.error('Market data error:', error.response?.data || error.message);
-      // Return mock data on error
-      return this.generateMockMarketData();
+      console.error('❌ Market data error:', error.response?.data || error.message);
+      throw error;
     }
-  }
-
-  generateMockMarketData() {
-    const basePrice = 18350;
-    const priceVariation = Math.random() * 100 - 50;
-    const ltp = basePrice + priceVariation;
-    
-    return {
-      success: true,
-      status: true,
-      data: {
-        ltp: ltp,
-        open: basePrice - 50,
-        high: basePrice + 100,
-        low: basePrice - 100,
-        close: basePrice - 30,
-        volume: 15000000 + Math.floor(Math.random() * 5000000),
-        oi: 1400000 + Math.floor(Math.random() * 100000) - 50000,
-        oiChange: (Math.random() * 10 - 5).toFixed(2),
-        atp: ltp - (Math.random() * 20 - 10),
-        callOI: 5000000 + Math.floor(Math.random() * 500000),
-        putOI: 5500000 + Math.floor(Math.random() * 500000)
-      }
-    };
   }
 
   async getOptionChain(symbol, expiryDate) {
     try {
-      const response = await axios.get(`${API_BASE_URL}/rest/secure/angelbroking/market/v1/optionChain`, {
-        params: {
-          symbol: symbol,
-          expirydate: expiryDate
-        },
-        headers: this.getHeaders()
-      });
-      return response.data;
+      console.log(`📈 Fetching option chain for ${symbol} expiry: ${expiryDate}`);
+      
+      // Angel One doesn't have a direct option chain API
+      // We need to fetch individual option contracts
+      // For now, return null and let the app generate strikes based on current price
+      console.warn('⚠️ Angel One API does not provide option chain endpoint');
+      console.warn('💡 App will calculate strikes based on current price');
+      
+      return null;
     } catch (error) {
       console.error('Option chain error:', error);
-      throw error;
+      return null;
     }
   }
 
