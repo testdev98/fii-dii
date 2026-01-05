@@ -1,6 +1,7 @@
 import React from 'react';
 import { Activity, TrendingUp, TrendingDown, AlertTriangle, Target, BarChart2, PieChart } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ComposedChart, Area } from 'recharts';
+import InfoTooltip from './InfoTooltip';
 
 const OIAnalysis = ({ oiData, priceData }) => {
   // Calculate OI metrics
@@ -28,9 +29,16 @@ const OIAnalysis = ({ oiData, priceData }) => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-purple-900 to-pink-900 rounded-lg p-6">
-        <h2 className="text-2xl font-bold mb-2">📊 Open Interest (OI) Deep Analysis</h2>
-        <p className="text-sm text-gray-300">
+      <div className="bg-slate-800 border border-slate-600 rounded-lg p-6">
+        <h2 className="text-2xl font-bold text-slate-100 mb-2 flex items-center">
+          📊 Open Interest (OI) Deep Analysis
+          <InfoTooltip
+            title="Open Interest Deep Analysis"
+            content="Comprehensive analysis of Open Interest to understand market positioning, strength of trends, and future direction. OI combined with price movement reveals the true market phase."
+            tradingLogic="Use this section to identify if the current trend is strong or weak. Strong trends have rising OI, weak trends have falling OI. This helps you decide whether to trade aggressively or stay cautious."
+          />
+        </h2>
+        <p className="text-sm text-slate-400">
           Complete OI analysis to understand market positioning and future direction
         </p>
       </div>
@@ -80,9 +88,14 @@ const OIAnalysis = ({ oiData, priceData }) => {
 
       {/* OI Interpretation Guide */}
       <div className="bg-slate-800 rounded-lg p-6">
-        <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-          <Target className="w-6 h-6 text-yellow-400" />
+        <h3 className="text-xl font-bold text-slate-100 mb-4 flex items-center gap-2">
+          <Target className="w-6 h-6 text-blue-400" />
           What is Open Interest (OI)?
+          <InfoTooltip
+            title="Open Interest Explained"
+            content="Open Interest is the total number of outstanding derivative contracts (futures/options) that haven't been settled. It shows how many positions are currently open in the market."
+            tradingLogic="Rising OI = New positions being created (strong trend). Falling OI = Positions being closed (weak trend or reversal). Always combine OI with price direction to understand market phase."
+          />
         </h3>
 
         <div className="space-y-4">
@@ -108,7 +121,7 @@ const OIAnalysis = ({ oiData, priceData }) => {
 
       {/* 4 Market Phases Detailed */}
       <div className="bg-slate-800 rounded-lg p-6">
-        <h3 className="text-xl font-bold mb-4">🎯 4 Market Phases Based on Price + OI</h3>
+        <h3 className="text-xl font-bold text-slate-100 mb-4">🎯 4 Market Phases Based on Price + OI</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Long Buildup */}
@@ -215,17 +228,42 @@ const OIAnalysis = ({ oiData, priceData }) => {
 
       {/* Price vs OI Chart */}
       <div className="bg-slate-800 rounded-lg p-6">
-        <h3 className="text-xl font-bold mb-4">📈 Price vs OI Movement (Last 10 Days)</h3>
+        <h3 className="text-xl font-bold text-slate-100 mb-4 flex items-center">
+          📈 Price vs OI Movement (Last 10 Days)
+          <InfoTooltip
+            title="Price vs OI Historical Chart"
+            content="This chart overlays Price and OI movements over the last 10 days, helping you see patterns and correlations between them."
+            tradingLogic="Look for alignment: Both rising = Strong bullish, Both falling = Weak bearish. Divergence: Price up + OI down = Short covering (weak), Price down + OI up = Short buildup (strong bearish)."
+          />
+        </h3>
 
         <ResponsiveContainer width="100%" height={300}>
           <ComposedChart data={oiData.historicalData || []}>
             <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
             <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} />
-            <YAxis yAxisId="left" stroke="#9ca3af" fontSize={12} />
-            <YAxis yAxisId="right" orientation="right" stroke="#9ca3af" fontSize={12} />
+            <YAxis 
+              yAxisId="left" 
+              stroke="#9ca3af" 
+              fontSize={12}
+              tickFormatter={(value) => `${(value / 100000).toFixed(1)}L`}
+              label={{ value: 'OI (Lakhs)', angle: -90, position: 'insideLeft', fill: '#9ca3af' }}
+            />
+            <YAxis 
+              yAxisId="right" 
+              orientation="right" 
+              stroke="#9ca3af" 
+              fontSize={12}
+              tickFormatter={(value) => `₹${value.toFixed(0)}`}
+              label={{ value: 'Price (₹)', angle: 90, position: 'insideRight', fill: '#9ca3af' }}
+            />
             <Tooltip 
               contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569' }}
               labelStyle={{ color: '#e2e8f0' }}
+              formatter={(value, name) => {
+                if (name === 'Open Interest') return [`${(value / 100000).toFixed(2)} L`, name];
+                if (name === 'Price') return [`₹${value.toFixed(2)}`, name];
+                return [value, name];
+              }}
             />
             <Legend />
             <Area yAxisId="left" type="monotone" dataKey="oi" fill="#8b5cf6" stroke="#8b5cf6" fillOpacity={0.3} name="Open Interest" />
@@ -257,7 +295,14 @@ const OIAnalysis = ({ oiData, priceData }) => {
 
       {/* Call vs Put OI */}
       <div className="bg-slate-800 rounded-lg p-6">
-        <h3 className="text-xl font-bold mb-4">📞 Call vs Put OI Distribution</h3>
+        <h3 className="text-xl font-bold text-slate-100 mb-4 flex items-center">
+          📞 Call vs Put OI Distribution
+          <InfoTooltip
+            title="Call vs Put OI"
+            content="Shows Open Interest distribution across different strike prices for Call options (red) and Put options (green). High OI at a strike indicates strong support/resistance."
+            tradingLogic="Max Call OI strike = Resistance level (price struggles to go above). Max Put OI strike = Support level (price finds buying interest). Trade within this range or wait for breakout with volume."
+          />
+        </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
@@ -307,9 +352,14 @@ const OIAnalysis = ({ oiData, priceData }) => {
 
       {/* PCR Ratio */}
       <div className="bg-slate-800 rounded-lg p-6">
-        <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+        <h3 className="text-xl font-bold text-slate-100 mb-4 flex items-center gap-2">
           <PieChart className="w-6 h-6 text-blue-400" />
           Put-Call Ratio (PCR) Analysis
+          <InfoTooltip
+            title="Put-Call Ratio (PCR)"
+            content="PCR is calculated as Put OI divided by Call OI. It's a sentiment indicator showing whether traders are more bearish (buying puts) or bullish (buying calls)."
+            tradingLogic="PCR > 1.2 = Oversold, expect bounce (Bullish). PCR 0.8-1.2 = Neutral. PCR < 0.8 = Overbought, expect correction (Bearish). Extreme PCR values (>1.5 or <0.6) signal strong reversals."
+          />
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -359,8 +409,8 @@ const OIAnalysis = ({ oiData, priceData }) => {
       </div>
 
       {/* OI Trading Strategies */}
-      <div className="bg-gradient-to-r from-purple-900 to-blue-900 rounded-lg p-6">
-        <h3 className="text-xl font-bold mb-4">🎯 OI-Based Trading Strategies</h3>
+      <div className="bg-slate-800 border border-slate-600 rounded-lg p-6">
+        <h3 className="text-xl font-bold text-slate-100 mb-4">🎯 OI-Based Trading Strategies</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-slate-800 bg-opacity-50 rounded-lg p-4">
@@ -422,7 +472,7 @@ const OIAnalysis = ({ oiData, priceData }) => {
 
       {/* Quick Reference */}
       <div className="bg-slate-800 rounded-lg p-6">
-        <h3 className="text-xl font-bold mb-4">📋 Quick OI Reference Table</h3>
+        <h3 className="text-xl font-bold text-slate-100 mb-4">📋 Quick OI Reference Table</h3>
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">

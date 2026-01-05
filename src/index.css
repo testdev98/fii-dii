@@ -17,6 +17,63 @@ body {
   box-sizing: border-box;
 }
 
+/* Override white backgrounds with dark theme */
+.bg-white {
+  background-color: #1e293b !important;
+}
+
+.border-gray-200 {
+  border-color: #475569 !important;
+}
+
+.border-gray-100 {
+  border-color: #334155 !important;
+}
+
+.bg-gray-50 {
+  background-color: #334155 !important;
+}
+
+.bg-gray-100 {
+  background-color: #475569 !important;
+}
+
+.text-gray-900 {
+  color: #e2e8f0 !important;
+}
+
+.text-gray-700 {
+  color: #cbd5e1 !important;
+}
+
+.text-gray-600 {
+  color: #94a3b8 !important;
+}
+
+.hover\:bg-gray-50:hover {
+  background-color: #334155 !important;
+}
+
+.hover\:bg-gray-200:hover {
+  background-color: #475569 !important;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Smooth scrolling for horizontal scroll */
+.overflow-x-auto {
+  scroll-behavior: smooth;
+}
+
 /* Hide scrollbar for Chrome, Safari and Opera */
 .scrollbar-hide::-webkit-scrollbar {
   display: none;

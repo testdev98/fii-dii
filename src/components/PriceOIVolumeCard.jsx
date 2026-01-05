@@ -1,6 +1,7 @@
 import React from 'react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area, ComposedChart } from 'recharts';
 import { TrendingUp, TrendingDown, Activity } from 'lucide-react';
+import InfoTooltip from './InfoTooltip';
 
 const PriceOIVolumeCard = ({ data }) => {
   // Format large numbers
@@ -11,15 +12,35 @@ const PriceOIVolumeCard = ({ data }) => {
     return num.toFixed(0);
   };
 
+  // Format OI in Lakhs
+  const formatOIInLakhs = (num) => {
+    return `${(num / 100000).toFixed(2)} L`;
+  };
+
   const formatPrice = (price) => {
     return `₹${price.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
   };
+
+  // Calculate OI changes for each day
+  const historicalDataWithOIChange = data.historicalData.map((item, index) => {
+    if (index === 0) {
+      return { ...item, oiChange: 0 };
+    }
+    const prevOI = data.historicalData[index - 1].oi;
+    const oiChange = ((item.oi - prevOI) / prevOI) * 100;
+    return { ...item, oiChange };
+  });
 
   return (
     <div className="bg-slate-800 rounded-lg p-4 md:p-6">
       <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
         <Activity className="w-6 h-6 text-blue-400" />
         Price + OI + Volume Analysis
+        <InfoTooltip
+          title="Price + OI + Volume Analysis"
+          content="This chart shows the relationship between Price movement, Open Interest changes, and Trading Volume. These three factors together reveal market strength and direction."
+          tradingLogic="When price rises with increasing OI and high volume, it indicates strong bullish trend (Long Buildup). When price rises but OI falls, it's weak rally (Short Covering). Use this to confirm trend strength before taking positions."
+        />
       </h3>
       
       {/* Key Metrics */}
@@ -80,7 +101,14 @@ const PriceOIVolumeCard = ({ data }) => {
       {/* Combined Price & OI Chart */}
       <div className="bg-slate-700 rounded-lg p-4 mb-4">
         <div className="text-sm font-semibold mb-3 flex items-center justify-between">
-          <span>📈 Price & OI Movement (Last 5 Days)</span>
+          <span className="flex items-center">
+            📈 Price & OI Movement (Last 5 Days)
+            <InfoTooltip
+              title="Price & OI Dual Chart"
+              content="Dual-axis chart showing Price (blue line) and Open Interest (green area) over time. Watch how they move together or diverge."
+              tradingLogic="If both move in same direction = Strong trend. If they diverge (price up, OI down) = Weak move, likely reversal. Use this to identify genuine trends vs temporary moves."
+            />
+          </span>
           <span className="text-xs text-gray-400">Dual Axis Chart</span>
         </div>
         <ResponsiveContainer width="100%" height={250}>
@@ -106,15 +134,15 @@ const PriceOIVolumeCard = ({ data }) => {
               stroke="#10b981" 
               fontSize={12}
               tick={{ fill: '#10b981' }}
-              tickFormatter={(value) => formatNumber(value)}
-              label={{ value: 'Open Interest', angle: 90, position: 'insideRight', fill: '#10b981' }}
+              tickFormatter={(value) => formatOIInLakhs(value)}
+              label={{ value: 'OI (Lakhs)', angle: 90, position: 'insideRight', fill: '#10b981' }}
             />
             <Tooltip 
               contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: '8px' }}
               labelStyle={{ color: '#e2e8f0', fontWeight: 'bold' }}
               formatter={(value, name) => {
                 if (name === 'Price') return [formatPrice(value), name];
-                if (name === 'Open Interest') return [formatNumber(value), name];
+                if (name === 'Open Interest') return [formatOIInLakhs(value), name];
                 return [value, name];
               }}
             />
@@ -144,7 +172,14 @@ const PriceOIVolumeCard = ({ data }) => {
       {/* Volume Chart */}
       <div className="bg-slate-700 rounded-lg p-4 mb-4">
         <div className="text-sm font-semibold mb-3 flex items-center justify-between">
-          <span>📊 Volume Trend (Last 5 Days)</span>
+          <span className="flex items-center">
+            📊 Volume Trend (Last 5 Days)
+            <InfoTooltip
+              title="Volume Trend"
+              content="Trading volume shows market participation. Higher volume means more traders are active, which confirms price movements."
+              tradingLogic="High volume + price move = Strong, sustainable trend. Low volume + price move = Weak, temporary move. Always check if volume supports the price direction before trading."
+            />
+          </span>
           <span className="text-xs text-gray-400">Higher volume = Stronger move</span>
         </div>
         <ResponsiveContainer width="100%" height={200}>
@@ -175,6 +210,67 @@ const PriceOIVolumeCard = ({ data }) => {
               name="Volume"
             />
           </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* OI Change Chart */}
+      <div className="bg-slate-700 rounded-lg p-4 mb-4">
+        <div className="text-sm font-semibold mb-3 flex items-center justify-between">
+          <span className="flex items-center">
+            📊 OI Change % (Last 5 Days)
+            <InfoTooltip
+              title="OI Change Percentage"
+              content="Shows the percentage change in Open Interest day-over-day. Positive values indicate new positions being created, negative values indicate positions being closed."
+              tradingLogic="Rising OI with rising price = Strong bullish (Long Buildup). Rising OI with falling price = Strong bearish (Short Buildup). Falling OI = Position unwinding (weak trend)."
+            />
+          </span>
+          <span className="text-xs text-gray-400">Bars with trend line</span>
+        </div>
+        <ResponsiveContainer width="100%" height={200}>
+          <ComposedChart data={historicalDataWithOIChange}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+            <XAxis 
+              dataKey="date" 
+              stroke="#9ca3af" 
+              fontSize={12}
+              tick={{ fill: '#9ca3af' }}
+            />
+            <YAxis 
+              stroke="#9ca3af" 
+              fontSize={12}
+              tick={{ fill: '#9ca3af' }}
+              tickFormatter={(value) => `${value.toFixed(1)}%`}
+              label={{ value: 'OI Change %', angle: -90, position: 'insideLeft', fill: '#9ca3af' }}
+            />
+            <Tooltip 
+              contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: '8px' }}
+              labelStyle={{ color: '#e2e8f0', fontWeight: 'bold' }}
+              formatter={(value, name) => {
+                if (name === 'OI Change %') return [`${value.toFixed(2)}%`, name];
+                return [value, name];
+              }}
+            />
+            <Legend wrapperStyle={{ paddingTop: '10px' }} />
+            <Bar 
+              dataKey="oiChange" 
+              fill="#10b981" 
+              radius={[8, 8, 0, 0]}
+              name="OI Change %"
+            >
+              {historicalDataWithOIChange.map((entry, index) => (
+                <Bar key={`bar-${index}`} fill={entry.oiChange >= 0 ? '#10b981' : '#ef4444'} />
+              ))}
+            </Bar>
+            <Line 
+              type="monotone" 
+              dataKey="oiChange" 
+              stroke="#3b82f6" 
+              strokeWidth={2}
+              strokeDasharray="5 5"
+              dot={{ fill: '#3b82f6', r: 4 }}
+              name="Trend Line"
+            />
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
 

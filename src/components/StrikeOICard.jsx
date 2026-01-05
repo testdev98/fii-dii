@@ -1,5 +1,6 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import InfoTooltip from './InfoTooltip';
 
 const StrikeOICard = ({ strikeData, currentPrice }) => {
   const maxCallOI = strikeData.find(d => d.type === 'CALL' && d.oi === Math.max(...strikeData.filter(s => s.type === 'CALL').map(s => s.oi)));
@@ -7,7 +8,14 @@ const StrikeOICard = ({ strikeData, currentPrice }) => {
 
   return (
     <div className="bg-slate-800 rounded-lg p-4 md:p-6">
-      <h3 className="text-xl font-bold mb-4">Strike-wise OI Analysis</h3>
+      <h3 className="text-xl font-bold mb-4 flex items-center">
+        Strike-wise OI Analysis
+        <InfoTooltip
+          title="Strike-wise OI Analysis"
+          content="Shows Open Interest concentration at different strike prices. The strikes with maximum Call and Put OI act as key resistance and support levels respectively."
+          tradingLogic="Max Call OI = Strong resistance (sellers active). Max Put OI = Strong support (buyers active). Market tends to trade between these levels. Breakout above/below with volume signals strong move."
+        />
+      </h3>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div className="bg-red-500 bg-opacity-10 border border-red-500 rounded-lg p-4">

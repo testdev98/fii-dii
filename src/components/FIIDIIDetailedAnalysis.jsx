@@ -1,6 +1,7 @@
 import React from 'react';
 import { TrendingUp, TrendingDown, Activity, Calendar, DollarSign, BarChart3, AlertCircle } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area, AreaChart } from 'recharts';
+import InfoTooltip from './InfoTooltip';
 
 const FIIDIIDetailedAnalysis = ({ fiiDiiData }) => {
   // Calculate additional metrics
@@ -11,9 +12,16 @@ const FIIDIIDetailedAnalysis = ({ fiiDiiData }) => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-900 to-purple-900 rounded-lg p-6">
-        <h2 className="text-2xl font-bold mb-2">📊 FII/DII Detailed Analysis</h2>
-        <p className="text-sm text-gray-300">
+      <div className="bg-slate-800 border border-slate-600 rounded-lg p-6">
+        <h2 className="text-2xl font-bold text-slate-100 mb-2 flex items-center">
+          📊 FII/DII Detailed Analysis
+          <InfoTooltip
+            title="FII/DII Detailed Analysis"
+            content="In-depth analysis of Foreign Institutional Investors (FII) and Domestic Institutional Investors (DII) activity including buying, selling, and net positions. This shows where smart money is flowing."
+            tradingLogic="FII are trend creators - follow their direction. DII are stabilizers - they support when FII sell. When both buy together = Super bullish. When both sell = Super bearish. Use this to align your trades with institutional money."
+          />
+        </h2>
+        <p className="text-sm text-slate-400">
           Comprehensive analysis of Foreign and Domestic Institutional Investor activity
         </p>
       </div>
@@ -65,6 +73,11 @@ const FIIDIIDetailedAnalysis = ({ fiiDiiData }) => {
         <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
           <TrendingUp className="w-6 h-6 text-blue-400" />
           FII (Foreign Institutional Investors) - Detailed
+          <InfoTooltip
+            title="FII Detailed Analysis"
+            content="Complete breakdown of Foreign Institutional Investor activity including total buying, selling, and net position. FIIs are the primary trend creators in Indian markets."
+            tradingLogic="FII Net Buying > ₹1000 Cr = Very Bullish. FII Net Selling > ₹1000 Cr = Very Bearish. Always follow FII direction as they drive major trends. Their sustained buying/selling creates multi-day/week trends."
+          />
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -96,8 +109,8 @@ const FIIDIIDetailedAnalysis = ({ fiiDiiData }) => {
           </div>
 
           {/* FII Insights */}
-          <div className="bg-gradient-to-br from-blue-900 to-blue-800 rounded-lg p-4">
-            <h4 className="font-semibold mb-3 text-blue-200">🎯 FII Trading Insights</h4>
+          <div className="bg-slate-700 border border-blue-500/50 rounded-lg p-4">
+            <h4 className="font-semibold mb-3 text-blue-300">🎯 FII Trading Insights</h4>
             <div className="space-y-3 text-sm">
               <div className="flex items-start gap-2">
                 <div className="w-2 h-2 bg-blue-400 rounded-full mt-1.5"></div>
@@ -133,6 +146,11 @@ const FIIDIIDetailedAnalysis = ({ fiiDiiData }) => {
         <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
           <TrendingDown className="w-6 h-6 text-purple-400" />
           DII (Domestic Institutional Investors) - Detailed
+          <InfoTooltip
+            title="DII Detailed Analysis"
+            content="Complete breakdown of Domestic Institutional Investor activity. DIIs include mutual funds, insurance companies, and domestic institutions that provide market stability."
+            tradingLogic="DII Buying when FII Selling = Support/stabilization (temporary). DII Selling when FII Buying = Profit booking (normal). DIIs alone can't create trends but provide important support/resistance levels."
+          />
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -164,8 +182,8 @@ const FIIDIIDetailedAnalysis = ({ fiiDiiData }) => {
           </div>
 
           {/* DII Insights */}
-          <div className="bg-gradient-to-br from-purple-900 to-purple-800 rounded-lg p-4">
-            <h4 className="font-semibold mb-3 text-purple-200">🛡️ DII Trading Insights</h4>
+          <div className="bg-slate-700 border border-purple-500/50 rounded-lg p-4">
+            <h4 className="font-semibold mb-3 text-purple-300">🛡️ DII Trading Insights</h4>
             <div className="space-y-3 text-sm">
               <div className="flex items-start gap-2">
                 <div className="w-2 h-2 bg-purple-400 rounded-full mt-1.5"></div>
@@ -201,6 +219,11 @@ const FIIDIIDetailedAnalysis = ({ fiiDiiData }) => {
         <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
           <BarChart3 className="w-6 h-6 text-green-400" />
           FII vs DII - Historical Trend (Last 10 Days)
+          <InfoTooltip
+            title="FII vs DII Historical Trend"
+            content="Shows the net activity of FII and DII over the last 10 days, helping you identify sustained patterns and trends in institutional behavior."
+            tradingLogic="Consistent FII buying for 3+ days = Strong bullish trend forming. Consistent FII selling = Strong bearish trend. Look for pattern changes as reversal signals. DII activity shows where support/resistance may form."
+          />
         </h3>
 
         <ResponsiveContainer width="100%" height={300}>
@@ -283,8 +306,8 @@ const FIIDIIDetailedAnalysis = ({ fiiDiiData }) => {
       </div>
 
       {/* Trading Strategies Based on FII/DII */}
-      <div className="bg-gradient-to-r from-green-900 to-blue-900 rounded-lg p-6">
-        <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+      <div className="bg-slate-800 border border-slate-600 rounded-lg p-6">
+        <h3 className="text-xl font-bold text-slate-100 mb-4 flex items-center gap-2">
           <AlertCircle className="w-6 h-6 text-yellow-400" />
           Trading Strategies Based on FII/DII Activity
         </h3>

@@ -11,6 +11,8 @@ import StrikeOICard from './components/StrikeOICard';
 import PriceOIVolumeCard from './components/PriceOIVolumeCard';
 import ConvictionMeter from './components/ConvictionMeter';
 import ScenarioTester from './components/ScenarioTester';
+import SectorAnalysis from './components/SectorAnalysis';
+import InfoTooltip from './components/InfoTooltip';
 import BrokerFactory from './services/brokerFactory';
 import { getSymbolToken } from './utils/symbolTokens';
 import { 
@@ -228,12 +230,15 @@ function App() {
         console.log(`   Volume: ${response.data.volume || 'N/A'}`);
         
         const processedData = {
+          // FII/DII data - Published by NSE after market hours (not real-time)
+          // This is yesterday's data or last available data
           fiiNet: 1250.50,
           diiNet: -850.30,
           fiiBuy: 12500,
           fiiSell: 11250,
           diiBuy: 8500,
           diiSell: 9350,
+          fiiDiiDate: 'Previous Trading Day', // FII/DII data is T-1 (yesterday)
           currentPrice: currentPrice, // Real-time price from broker
           previousClose: previousClose,
           openPrice: openPrice,
@@ -428,11 +433,27 @@ function App() {
   };
 
   const handleSymbolChange = (newSymbol) => {
+    console.log(`📊 Changing symbol from ${selectedSymbol} to ${newSymbol}`);
     setSelectedSymbol(newSymbol);
-    if (brokerApi && isLoggedIn) {
-      loadBrokerData(brokerApi);
-    }
+    // Data will be loaded by useEffect when selectedSymbol changes
   };
+
+  // Auto-reload data when symbol changes (but not on initial mount)
+  useEffect(() => {
+    // Skip if not logged in or no broker API
+    if (!brokerApi || !isLoggedIn) {
+      return;
+    }
+
+    // Skip on initial mount (when selectedSymbol is still 'NIFTY' and no data loaded yet)
+    if (!lastUpdate && selectedSymbol === 'NIFTY') {
+      return;
+    }
+
+    console.log(`🔄 Symbol changed to ${selectedSymbol}, reloading data...`);
+    loadBrokerData(brokerApi);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSymbol]); // Only trigger when selectedSymbol changes
 
   return (
     <div className="min-h-screen bg-slate-900 text-gray-100">
@@ -440,14 +461,20 @@ function App() {
       
       {!isLoggedIn ? (
         // Login Required Screen
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <TrendingUp className="w-20 h-20 text-blue-400 mx-auto mb-6" />
-            <h1 className="text-3xl font-bold mb-4">FII/DII Trading Dashboard</h1>
-            <p className="text-gray-400 mb-8">Login with your broker to access real-time market data</p>
+        <div className="flex items-center justify-center min-h-screen p-4">
+          <div className="max-w-md w-full bg-slate-800 border border-slate-700 rounded-xl shadow-xl p-8 text-center">
+            <div className="mb-6">
+              <div className="w-20 h-20 mx-auto bg-slate-700 rounded-xl flex items-center justify-center mb-4">
+                <TrendingUp className="w-10 h-10 text-blue-400" />
+              </div>
+              <h1 className="text-3xl font-bold text-slate-100 mb-2">
+                FII/DII Trading Dashboard
+              </h1>
+              <p className="text-slate-400 mb-8">Login with your broker to access real-time market data</p>
+            </div>
             <button
               onClick={() => setShowLogin(true)}
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition-colors"
+              className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition-colors"
             >
               Login to Continue
             </button>
@@ -456,17 +483,28 @@ function App() {
       ) : (
         <>
       {/* Header */}
-      <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-40">
+      <header className="bg-slate-800 border-b border-slate-700 shadow-md sticky top-0 z-40">
         <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
           {/* Top Row - Logo and Actions */}
           <div className="flex items-center justify-between gap-2">
             {/* Logo and Title */}
             <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-              <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-blue-400 flex-shrink-0" />
+              <div className="p-2 bg-slate-700 rounded-lg">
+                <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400 flex-shrink-0" />
+              </div>
               <div className="min-w-0">
-                <h1 className="text-base sm:text-xl md:text-2xl font-bold truncate">FII/DII Trading Dashboard</h1>
-                <p className="text-xs text-gray-400 hidden sm:block">
-                  {selectedBroker ? `Connected to ${selectedBroker.name}` : 'Professional Market Analysis'}
+                <h1 className="text-base sm:text-xl md:text-2xl font-bold text-slate-100 truncate">
+                  FII/DII Trading Dashboard
+                </h1>
+                <p className="text-xs text-slate-400 hidden sm:block">
+                  {selectedBroker ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                      Connected to {selectedBroker.name}
+                    </span>
+                  ) : (
+                    'Professional Market Analysis'
+                  )}
                 </p>
               </div>
             </div>
@@ -476,17 +514,18 @@ function App() {
               {/* Scenario Tester - Hidden on mobile */}
               <button
                 onClick={() => setActiveTab(activeTab === 'dashboard' ? 'tester' : 'dashboard')}
-                className="hidden sm:block p-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
+                className="hidden sm:flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors"
                 title="Toggle Scenario Tester"
               >
                 <TestTube className="w-5 h-5" />
+                <span className="text-sm font-medium hidden md:inline">Tester</span>
               </button>
               
               {/* Refresh Button */}
               <button
                 onClick={handleRefresh}
                 disabled={loading}
-                className="p-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+                className="p-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Refresh Data"
               >
                 <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 ${loading ? 'animate-spin' : ''}`} />
@@ -506,39 +545,47 @@ function App() {
           {/* Second Row - Symbol Selector and Status */}
           <div className="mt-2 sm:mt-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
             {/* Symbol Selector */}
-            <select
-              value={selectedSymbol}
-              onChange={(e) => handleSymbolChange(e.target.value)}
-              className="w-full sm:w-auto px-3 py-2 bg-slate-700 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <optgroup label="Indices">
-                <option value="NIFTY">NIFTY 50</option>
-                <option value="BANKNIFTY">BANK NIFTY</option>
-                <option value="FINNIFTY">FIN NIFTY</option>
-                <option value="MIDCPNIFTY">MIDCAP NIFTY</option>
-              </optgroup>
-              <optgroup label="Popular Stocks">
-                <option value="RELIANCE">RELIANCE</option>
-                <option value="TCS">TCS</option>
-                <option value="HDFCBANK">HDFC BANK</option>
-                <option value="INFY">INFOSYS</option>
-                <option value="ICICIBANK">ICICI BANK</option>
-                <option value="SBIN">SBI</option>
-                <option value="BHARTIARTL">BHARTI AIRTEL</option>
-                <option value="ITC">ITC</option>
-                <option value="KOTAKBANK">KOTAK BANK</option>
-                <option value="LT">L&T</option>
-                <option value="AXISBANK">AXIS BANK</option>
-                <option value="WIPRO">WIPRO</option>
-                <option value="TATAMOTORS">TATA MOTORS</option>
-                <option value="TATASTEEL">TATA STEEL</option>
-                <option value="ADANIENT">ADANI ENTERPRISES</option>
-              </optgroup>
-            </select>
+            <div className="relative w-full sm:w-auto">
+              <select
+                value={selectedSymbol}
+                onChange={(e) => handleSymbolChange(e.target.value)}
+                disabled={loading}
+                className="w-full sm:w-auto px-4 py-2.5 bg-slate-700 border border-slate-600 rounded-lg text-sm font-semibold text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <optgroup label="Indices" className="bg-slate-800 text-slate-100">
+                  <option value="NIFTY" className="bg-slate-800 text-slate-100">NIFTY 50</option>
+                  <option value="BANKNIFTY" className="bg-slate-800 text-slate-100">BANK NIFTY</option>
+                  <option value="FINNIFTY" className="bg-slate-800 text-slate-100">FIN NIFTY</option>
+                  <option value="MIDCPNIFTY" className="bg-slate-800 text-slate-100">MIDCAP NIFTY</option>
+                </optgroup>
+                <optgroup label="Popular Stocks" className="bg-slate-800 text-slate-100">
+                  <option value="RELIANCE" className="bg-slate-800 text-slate-100">RELIANCE</option>
+                  <option value="TCS" className="bg-slate-800 text-slate-100">TCS</option>
+                  <option value="HDFCBANK" className="bg-slate-800 text-slate-100">HDFC BANK</option>
+                  <option value="INFY" className="bg-slate-800 text-slate-100">INFOSYS</option>
+                  <option value="ICICIBANK" className="bg-slate-800 text-slate-100">ICICI BANK</option>
+                  <option value="SBIN" className="bg-slate-800 text-slate-100">SBI</option>
+                  <option value="BHARTIARTL" className="bg-slate-800 text-slate-100">BHARTI AIRTEL</option>
+                  <option value="ITC" className="bg-slate-800 text-slate-100">ITC</option>
+                  <option value="KOTAKBANK" className="bg-slate-800 text-slate-100">KOTAK BANK</option>
+                  <option value="LT" className="bg-slate-800 text-slate-100">L&T</option>
+                  <option value="AXISBANK" className="bg-slate-800 text-slate-100">AXIS BANK</option>
+                  <option value="WIPRO" className="bg-slate-800 text-slate-100">WIPRO</option>
+                  <option value="TATAMOTORS" className="bg-slate-800 text-slate-100">TATA MOTORS</option>
+                  <option value="TATASTEEL" className="bg-slate-800 text-slate-100">TATA STEEL</option>
+                  <option value="ADANIENT" className="bg-slate-800 text-slate-100">ADANI ENTERPRISES</option>
+                </optgroup>
+              </select>
+              {loading && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <RefreshCw className="w-4 h-4 text-blue-400 animate-spin" />
+                </div>
+              )}
+            </div>
             
             {/* Status Info */}
             {lastUpdate && (
-              <div className="text-xs text-gray-400 flex flex-wrap items-center gap-2 sm:gap-4">
+              <div className="text-xs text-slate-400 flex flex-wrap items-center gap-2 sm:gap-4">
                 <span className="flex items-center gap-1">
                   <span className="hidden sm:inline">Tracking:</span>
                   <span className="text-blue-400 font-semibold">{selectedSymbol}</span>
@@ -564,13 +611,13 @@ function App() {
       {/* Main Content */}
       <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
           {/* Tab Navigation */}
-          <div className="flex gap-2 bg-slate-800 p-2 rounded-lg overflow-x-auto scrollbar-hide">
+          <div className="flex gap-2 bg-slate-800 border border-slate-600 p-2 rounded-lg overflow-x-auto scrollbar-hide shadow-sm">
             <button
               onClick={() => setActiveTab('dashboard')}
               className={`flex-1 min-w-[100px] sm:min-w-[120px] py-2 px-3 sm:px-4 rounded-lg text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap ${
                 activeTab === 'dashboard' 
                   ? 'bg-blue-600 text-white' 
-                  : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
+                  : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
               }`}
             >
               <span className="hidden sm:inline">📊 </span>Dashboard
@@ -580,7 +627,7 @@ function App() {
               className={`flex-1 min-w-[100px] sm:min-w-[120px] py-2 px-3 sm:px-4 rounded-lg text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap ${
                 activeTab === 'fii-dii' 
                   ? 'bg-green-600 text-white' 
-                  : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
+                  : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
               }`}
             >
               <span className="hidden sm:inline">💰 </span>FII/DII
@@ -590,7 +637,7 @@ function App() {
               className={`flex-1 min-w-[100px] sm:min-w-[120px] py-2 px-3 sm:px-4 rounded-lg text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap ${
                 activeTab === 'oi' 
                   ? 'bg-purple-600 text-white' 
-                  : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
+                  : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
               }`}
             >
               <span className="hidden sm:inline">📈 </span>OI
@@ -600,17 +647,27 @@ function App() {
               className={`flex-1 min-w-[100px] sm:min-w-[120px] py-2 px-3 sm:px-4 rounded-lg text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap ${
                 activeTab === 'live-oi' 
                   ? 'bg-red-600 text-white' 
-                  : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
+                  : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
               }`}
             >
               <span className="hidden sm:inline">🔴 </span>Live
+            </button>
+            <button
+              onClick={() => setActiveTab('sectors')}
+              className={`flex-1 min-w-[100px] sm:min-w-[120px] py-2 px-3 sm:px-4 rounded-lg text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap ${
+                activeTab === 'sectors' 
+                  ? 'bg-indigo-600 text-white' 
+                  : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
+              }`}
+            >
+              <span className="hidden sm:inline">🏭 </span>Sectors
             </button>
             <button
               onClick={() => setActiveTab('tester')}
               className={`flex-1 min-w-[100px] sm:min-w-[120px] py-2 px-3 sm:px-4 rounded-lg text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap ${
                 activeTab === 'tester' 
                   ? 'bg-orange-600 text-white' 
-                  : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
+                  : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
               }`}
             >
               <span className="hidden sm:inline">🧪 </span>Test
@@ -619,6 +676,8 @@ function App() {
 
           {activeTab === 'tester' ? (
             <ScenarioTester />
+          ) : activeTab === 'sectors' ? (
+            <SectorAnalysis brokerApi={brokerApi} />
           ) : activeTab === 'fii-dii' ? (
             <FIIDIIDetailedAnalysis fiiDiiData={{
               fiiNet: marketData.fiiNet,
@@ -665,14 +724,38 @@ function App() {
           {/* Market Scenario */}
           {scenario && (
             <section>
-              <h2 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">📊 Current Market Scenario</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-100 mb-3 sm:mb-4 flex items-center">
+                📊 Current Market Scenario
+                <InfoTooltip
+                  title="Current Market Scenario"
+                  content="Real-time detection of market condition based on today's Price, OI, FII/DII activity, and Volume. The system identifies which of 16 scenarios is currently active."
+                  tradingLogic="This is your trading compass. It tells you exactly what's happening and what action to take. Follow the recommended action (BUY/SELL/WAIT/AVOID) for best results. Update this daily before trading."
+                />
+              </h2>
               <MarketScenarioCard scenario={scenario} />
             </section>
           )}
 
           {/* FII/DII Data */}
           <section>
-            <h2 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">💰 FII/DII Net Position</h2>
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-100 flex items-center">
+                💰 FII/DII Net Position
+                <InfoTooltip
+                  title="FII/DII Net Position"
+                  content="Shows net buying/selling by Foreign Institutional Investors (FII) and Domestic Institutional Investors (DII). Positive = Net Buying, Negative = Net Selling. This data is published by NSE after market hours for the previous trading day."
+                  tradingLogic="FII are smart money - follow their direction. When FII buy heavily, market goes up. When FII sell, market falls. DII usually support when FII sell. Check this daily to know institutional sentiment before trading."
+                />
+              </h2>
+              <div className="text-xs text-yellow-400 bg-yellow-900 bg-opacity-30 px-3 py-1 rounded">
+                ⓘ Previous Day Data
+              </div>
+            </div>
+            <div className="bg-blue-500 bg-opacity-10 border border-blue-500 rounded-lg p-3 mb-4">
+              <p className="text-sm text-blue-300">
+                <strong>Note:</strong> FII/DII data is published by NSE after market hours (6-7 PM) for the previous trading day. This data does not change during market hours.
+              </p>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FIIDIICard 
                 title="FII (Foreign Institutional Investors)"
@@ -690,21 +773,42 @@ function App() {
           {/* Market Control */}
           {control && (
             <section>
-              <h2 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">👑 Who's in Control?</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-100 mb-3 sm:mb-4 flex items-center">
+                👑 Who's in Control?
+                <InfoTooltip
+                  title="Market Control Analysis"
+                  content="Identifies which institutional group (FII or DII) is dominating the market. The controller's actions drive market direction and create trends."
+                  tradingLogic="Trade with the controller, not against them. If FII controls, follow FII direction. If DII controls, market is stabilizing. Mixed control = wait for clarity. This is key to understanding market power dynamics."
+                />
+              </h2>
               <MarketControlCard control={control} />
             </section>
           )}
 
           {/* Price + OI + Volume */}
           <section>
-            <h2 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">📈 Price + OI + Volume Analysis</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-100 mb-3 sm:mb-4 flex items-center">
+              📈 Price + OI + Volume Analysis
+              <InfoTooltip
+                title="Price + OI + Volume Analysis"
+                content="Combined analysis of three critical factors: Price movement, Open Interest changes, and Trading Volume. Together they reveal market phase (Long Buildup, Short Covering, etc.)."
+                tradingLogic="This section identifies the current market phase. Long Buildup = Strong bullish, go long. Short Buildup = Strong bearish, go short. Short Covering/Long Unwinding = Weak moves, avoid. Always check volume confirmation."
+              />
+            </h2>
             <PriceOIVolumeCard data={marketData} />
             </section>
 
           {/* Strike OI */}
           {strikeData.length > 0 && (
             <section>
-              <h2 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">🎯 Strike-wise OI (Support & Resistance)</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-100 mb-3 sm:mb-4 flex items-center">
+                🎯 Strike-wise OI (Support & Resistance)
+                <InfoTooltip
+                  title="Strike-wise Open Interest"
+                  content="Shows Open Interest distribution across different strike prices. High Call OI = Resistance level. High Put OI = Support level. These are key price levels where market tends to reverse."
+                  tradingLogic="Max Call OI = Strong resistance, price struggles to go above. Max Put OI = Strong support, price bounces from here. Trade between these levels. Break above Call OI = Very bullish. Break below Put OI = Very bearish."
+                />
+              </h2>
               <StrikeOICard strikeData={strikeData} currentPrice={marketData.currentPrice} />
             </section>
           )}
@@ -712,14 +816,28 @@ function App() {
           {/* Conviction Meter */}
           {conviction && (
             <section>
-              <h2 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">🔥 Market Conviction</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-100 mb-3 sm:mb-4 flex items-center">
+                🔥 Market Conviction
+                <InfoTooltip
+                  title="Market Conviction Meter"
+                  content="Measures overall market strength and conviction based on Price change magnitude, OI change, and Volume. Score ranges from 0-100. Higher score = Stronger conviction."
+                  tradingLogic="High conviction (70+) = Strong trend, trade aggressively. Medium conviction (40-70) = Moderate trend, trade cautiously. Low conviction (<40) = Weak trend, avoid or use tight stops. Always check conviction before position sizing."
+                />
+              </h2>
               <ConvictionMeter conviction={conviction} />
             </section>
           )}
 
           {/* Professional Workflow */}
           <section className="bg-gradient-to-r from-blue-900 to-purple-900 rounded-lg p-4 sm:p-6">
-            <h2 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">🧠 Professional Workflow</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-100 mb-3 sm:mb-4 flex items-center">
+              🧠 Professional Workflow
+              <InfoTooltip
+                title="Professional Trading Workflow"
+                content="Step-by-step process used by professional traders to analyze market conditions. Follow these 5 steps in order every day before taking any trade."
+                tradingLogic="This is your daily checklist. Step 1: Check price trend. Step 2: Check OI (strength). Step 3: Check FII/DII (conviction). Step 4: Mark support/resistance. Step 5: Confirm if creating or exiting. Complete all 5 steps before trading."
+              />
+            </h2>
             <div className="space-y-3">
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">1</div>
@@ -761,7 +879,14 @@ function App() {
 
           {/* Memory Rule */}
           <section className="bg-slate-800 rounded-lg p-4 sm:p-6 border-2 border-yellow-500">
-            <h2 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4 text-yellow-400">💡 One-Line Memory Rule</h2>
+            <h2 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4 text-yellow-400 flex items-center">
+              💡 One-Line Memory Rule
+              <InfoTooltip
+                title="One-Line Memory Rule"
+                content="Simple 4-line formula to remember the entire trading system. Each line represents one key factor and what it tells you about the market."
+                tradingLogic="Memorize this: Price = Direction (up/down), OI = Strength (strong/weak), FII = Conviction (high/low), Strike OI = Limits (support/resistance). These 4 factors together give you complete market picture. Use this every day."
+              />
+            </h2>
             <div className="text-base sm:text-lg text-center space-y-2">
               <div><span className="font-bold text-blue-400">Price</span> tells direction</div>
               <div><span className="font-bold text-green-400">OI</span> tells strength</div>

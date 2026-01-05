@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Activity, RefreshCw, Clock, TrendingUp, TrendingDown, Play, Pause, Download } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area } from 'recharts';
 import { getSymbolToken } from '../utils/symbolTokens';
+import InfoTooltip from './InfoTooltip';
 
 const LiveOITracker = ({ brokerApi, symbol = 'NIFTY' }) => {
   const [isTracking, setIsTracking] = useState(false);
@@ -161,10 +162,17 @@ const LiveOITracker = ({ brokerApi, symbol = 'NIFTY' }) => {
   return (
     <div className="space-y-6">
       {/* Header with Controls */}
-      <div className="bg-gradient-to-r from-blue-900 to-purple-900 rounded-lg p-6">
+      <div className="bg-slate-800 border border-slate-600 rounded-lg p-6">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold mb-2">📊 Live OI Tracker - {symbol}</h2>
+            <h2 className="text-2xl font-bold text-slate-100 mb-2 flex items-center">
+              📊 Live OI Tracker - {symbol}
+              <InfoTooltip
+                title="Live OI Tracker"
+                content="Real-time tracking of Open Interest, Volume, and Price during market hours. Updates automatically at your chosen interval to show live market activity."
+                tradingLogic="Use this to monitor intraday OI changes. Rising OI with price = Strong trend continuation. Falling OI = Position unwinding. Track Call/Put OI to identify intraday support/resistance levels."
+              />
+            </h2>
             <p className="text-sm text-gray-300">
               Real-time Open Interest, Volume & ATP tracking during market hours
             </p>
@@ -314,6 +322,11 @@ const LiveOITracker = ({ brokerApi, symbol = 'NIFTY' }) => {
             <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
               <Activity className="w-6 h-6 text-blue-400" />
               Open Interest Movement
+              <InfoTooltip
+                title="Live OI Movement Chart"
+                content="Shows how Open Interest is changing throughout the trading session. Each data point represents OI at that specific time."
+                tradingLogic="Steadily rising OI = Positions building up (trend strengthening). Falling OI = Positions closing (trend weakening). Sudden spikes = Big players entering. Use with price to confirm intraday direction."
+              />
             </h3>
             <ResponsiveContainer width="100%" height={300}>
               <ComposedChart data={oiData}>
@@ -370,6 +383,11 @@ const LiveOITracker = ({ brokerApi, symbol = 'NIFTY' }) => {
             <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
               <TrendingUp className="w-6 h-6 text-green-400" />
               Volume Movement
+              <InfoTooltip
+                title="Live Volume Chart"
+                content="Real-time trading volume showing market participation at different times during the session."
+                tradingLogic="High volume periods = Active trading, strong moves. Low volume = Weak participation, avoid trading. Volume spikes with price moves = Genuine breakouts. Use to time your entries/exits."
+              />
             </h3>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={oiData}>

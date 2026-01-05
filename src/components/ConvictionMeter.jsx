@@ -1,5 +1,6 @@
 import React from 'react';
 import { Activity } from 'lucide-react';
+import InfoTooltip from './InfoTooltip';
 
 const ConvictionMeter = ({ conviction }) => {
   return (
@@ -7,6 +8,11 @@ const ConvictionMeter = ({ conviction }) => {
       <div className="flex items-center gap-2 mb-4">
         <Activity className="w-5 h-5" />
         <h3 className="text-xl font-bold">Market Conviction</h3>
+        <InfoTooltip
+          title="Market Conviction Meter"
+          content="Measures the strength and confidence of the current market move based on Price movement, OI change, Volume, and alignment of all factors."
+          tradingLogic="HIGH conviction (>75%) = Strong, sustainable trend - Trade with confidence. MEDIUM (50-75%) = Moderate trend - Use caution. LOW (<50%) = Weak trend - Avoid or wait for confirmation."
+        />
       </div>
 
       <div className="relative">

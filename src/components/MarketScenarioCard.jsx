@@ -1,5 +1,6 @@
 import React from 'react';
 import { TrendingUp, TrendingDown, AlertTriangle, Shield } from 'lucide-react';
+import InfoTooltip from './InfoTooltip';
 
 const MarketScenarioCard = ({ scenario }) => {
   const getIcon = () => {
@@ -19,8 +20,13 @@ const MarketScenarioCard = ({ scenario }) => {
             </div>
           </div>
           <div>
-            <h3 className="text-xl font-bold" style={{ color: scenario.color }}>
+            <h3 className="text-xl font-bold flex items-center gap-2" style={{ color: scenario.color }}>
               {scenario.icon} {scenario.signal}
+              <InfoTooltip
+                title="Market Scenario Detection"
+                content="This card shows the detected market scenario based on Price movement, OI change, FII/DII activity, and Volume. The system analyzes these 4 factors to identify 16 different market conditions."
+                tradingLogic="Each scenario tells you what's happening and what to do. BULLISH scenarios = Go long. BEARISH scenarios = Go short or exit longs. WEAK/TRAP scenarios = Avoid trading. Always follow the recommended action for best results."
+              />
             </h3>
             <span className={`text-xs px-2 py-1 rounded-full ${
               scenario.strength === 'HIGH' ? 'bg-green-500 bg-opacity-20 text-green-300' :

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Crown, Shield, Users } from 'lucide-react';
+import InfoTooltip from './InfoTooltip';
 
 const MarketControlCard = ({ control }) => {
   const getIcon = () => {
@@ -18,9 +19,14 @@ const MarketControlCard = ({ control }) => {
     <div className="bg-slate-800 rounded-lg p-6 border-2" style={{ borderColor: getColor() }}>
       <div className="flex items-center gap-4 mb-4">
         {getIcon()}
-        <div>
-          <h3 className="text-2xl font-bold" style={{ color: getColor() }}>
+        <div className="flex-1">
+          <h3 className="text-2xl font-bold flex items-center" style={{ color: getColor() }}>
             {control.controller} IN CONTROL
+            <InfoTooltip
+              title="Market Control Indicator"
+              content="Shows which institutional group (FII or DII) is dominating the market based on their net activity. The dominant player's actions drive market direction."
+              tradingLogic="FII Control = Follow FII direction, they create trends. DII Control = Market stabilizing, less directional. Mixed = Watch for clear winner before taking positions. Always align your trades with the controller."
+            />
           </h3>
           <p className="text-sm text-gray-400">{control.strength} Control</p>
         </div>
