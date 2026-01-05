@@ -9,8 +9,8 @@ export const BROKERS = {
     fields: [
       { name: 'apiKey', label: 'API Key', type: 'text', required: true, placeholder: 'Enter your API Key' },
       { name: 'clientId', label: 'Client ID', type: 'text', required: true, placeholder: 'Enter your Client ID' },
-      { name: 'password', label: 'Password', type: 'password', required: true, placeholder: 'Enter your Password' },
-      { name: 'totp', label: 'TOTP', type: 'text', required: true, placeholder: 'Enter TOTP from authenticator' }
+      { name: 'password', label: 'MPIN (4-digit)', type: 'password', required: true, placeholder: 'Enter your 4-digit MPIN (not password)' },
+      { name: 'totp', label: 'TOTP Code', type: 'text', required: true, placeholder: 'Enter 6-digit code from authenticator app' }
     ],
     apiUrl: 'https://apiconnect.angelbroking.com',
     documentation: 'https://smartapi.angelbroking.com/docs'

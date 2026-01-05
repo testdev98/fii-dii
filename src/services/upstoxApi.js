@@ -8,6 +8,12 @@ class UpstoxAPI {
     this.baseUrl = 'https://api.upstox.com/v2';
   }
 
+  setCredentials(apiKey, apiSecret, accessToken) {
+    this.apiKey = apiKey;
+    this.apiSecret = apiSecret;
+    this.accessToken = accessToken;
+  }
+
   async login(credentials) {
     this.apiKey = credentials.apiKey;
     this.apiSecret = credentials.apiSecret;

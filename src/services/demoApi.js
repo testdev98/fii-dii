@@ -5,6 +5,10 @@ class DemoAPI {
     this.isDemo = true;
   }
 
+  setCredentials() {
+    // Demo mode doesn't need credentials
+  }
+
   async login(credentials) {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 1000));

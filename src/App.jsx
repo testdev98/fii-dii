@@ -12,6 +12,7 @@ import PriceOIVolumeCard from './components/PriceOIVolumeCard';
 import ConvictionMeter from './components/ConvictionMeter';
 import ScenarioTester from './components/ScenarioTester';
 import BrokerFactory from './services/brokerFactory';
+import { getSymbolToken } from './utils/symbolTokens';
 import { 
   analyzeMarketScenario, 
   getMarketControl, 
@@ -49,6 +50,50 @@ function App() {
   const [control, setControl] = useState(null);
   const [conviction, setConviction] = useState(null);
 
+  // Restore session on mount
+  useEffect(() => {
+    const restoreSession = () => {
+      try {
+        const sessionData = localStorage.getItem('brokerSession');
+        if (sessionData) {
+          const { broker, credentials, expiresAt } = JSON.parse(sessionData);
+          
+          // Check if session is still valid (24 hours)
+          if (expiresAt && Date.now() < expiresAt) {
+            // Restore session
+            setSelectedBroker(broker);
+            const api = BrokerFactory.createBrokerAPI(broker.id);
+            
+            // Restore API credentials
+            if (credentials.accessToken) {
+              api.setCredentials(
+                credentials.apiKey,
+                credentials.clientId,
+                credentials.accessToken,
+                credentials.feedToken
+              );
+            }
+            
+            setBrokerApi(api);
+            setIsLoggedIn(true);
+            setShowLogin(false);
+            
+            // Load market data
+            loadMarketData(api);
+          } else {
+            // Session expired, clear it
+            localStorage.removeItem('brokerSession');
+          }
+        }
+      } catch (error) {
+        console.error('Error restoring session:', error);
+        localStorage.removeItem('brokerSession');
+      }
+    };
+
+    restoreSession();
+  }, []);
+
   const handleLogin = async (loginData) => {
     try {
       setLoading(true);
@@ -61,12 +106,26 @@ function App() {
       setBrokerApi(api);
       
       // Login to broker (or skip for demo)
+      let loginResponse = null;
       if (!broker.isDemo) {
-        await api.login(credentials);
+        loginResponse = await api.login(credentials);
       }
       
       setIsLoggedIn(true);
       setShowLogin(false);
+      
+      // Save session to localStorage (expires in 24 hours)
+      const sessionData = {
+        broker: broker,
+        credentials: {
+          apiKey: credentials.apiKey,
+          clientId: credentials.clientId,
+          accessToken: loginResponse?.data?.jwtToken || null,
+          feedToken: loginResponse?.data?.feedToken || null
+        },
+        expiresAt: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
+      };
+      localStorage.setItem('brokerSession', JSON.stringify(sessionData));
       
       // Load market data
       await loadMarketData(api);
@@ -82,11 +141,14 @@ function App() {
     try {
       setLoading(true);
       
+      // Get symbol token for Angel One API
+      const symbolInfo = getSymbolToken(symbol);
+      
       // Fetch data from broker API
       const [marketDataRes, fiiDiiRes, historicalRes] = await Promise.all([
-        api.getMarketData(symbol, 'NSE').catch(() => null),
+        api.getMarketData(symbol, symbolInfo.exchange, symbolInfo.token).catch(() => null),
         api.getFIIDIIData ? api.getFIIDIIData().catch(() => null) : null,
-        api.getHistoricalData ? api.getHistoricalData(symbol, 'day', null, null).catch(() => null) : null
+        api.getHistoricalData ? api.getHistoricalData(symbolInfo.token, symbolInfo.exchange, 'ONE_DAY', null, null).catch(() => null) : null
       ]);
 
       // Process market data
@@ -159,6 +221,10 @@ function App() {
     setShowLogin(true);
     setBrokerApi(null);
     setSelectedBroker(null);
+    
+    // Clear session from localStorage
+    localStorage.removeItem('brokerSession');
+    
     setMarketData({
       fiiNet: 0,
       diiNet: 0,
